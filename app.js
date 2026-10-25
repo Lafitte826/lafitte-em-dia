@@ -113,12 +113,9 @@ const TELAS = {
         <span class="q">${n ? (n === 1 ? "1 tarefa" : n + " tarefas") : "Em dia ✅"}</span></a>`;
     }
     h += `</div>`;
-    const novos = ((await DB.ler("registros")) || []).filter(x => !x.noResumo);
-    if (novos.length) {
-      const atrasado = novos.some(x => x.dia < Agenda.iso(hoje));
-      h += `<a class="card ${atrasado ? "pend" : ""}" href="#/resumo"><span class="ic">📤</span><span class="tx"><b>Enviar resumo do dia</b>
-        <span class="q">${atrasado ? "Tem resumo de dia anterior sem enviar" : `${novos.length} ${novos.length === 1 ? "tarefa feita" : "tarefas feitas"} hoje`}</span></span><span class="seta">›</span></a>`;
-    }
+    for (const rel of await relatoriosDevidos(e, hoje))
+      h += `<a class="card pend" href="#/relatorio/${rel.tipo}"><span class="ic">📤</span><span class="tx"><b>${rel.titulo}</b>
+        <span class="q">Enviar para o síndico</span></span><span class="seta">›</span></a>`;
     if ("Notification" in window && Notification.permission !== "granted")
       h += `<button class="btn sec" id="avisos">🔔 Ativar avisos</button>`;
     h += `<div class="rodape"><a href="#/historico">Histórico</a> · versão ${CONFIG.versao}</div>`;
@@ -325,13 +322,13 @@ const TELAS = {
     const { texto, falta } = await montarMensagem(t, e, r, fotos.length);
     const numero = String(CONFIG.whatsapp || "").replace(/\D/g, "");
     const link = `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
-    // Leituras e caminhão de gás vão na hora. O resto vai no resumo do dia, a não ser que tenha problema ou foto.
+    // Leituras e caminhão de gás vão na hora. O resto vai no resumo da semana e no do mês, a não ser que tenha problema ou foto.
     const urgente = !naHora(t) && (fotos.length || temProblema(t, r));
     let h = `<h1>${t.icone} ${naHora(t) || urgente ? "Revisar e enviar" : "Revisar e concluir"}</h1>`;
     if (falta) h += `<p class="card pend"><b>Atenção</b><span class="q">${esc(falta)}</span></p>`;
     h += `<pre class="msg">${esc(texto)}</pre>`;
     if (!naHora(t) && !urgente) {
-      h += `<button class="btn ok" id="concluir">✔ Concluir</button><p class="nota">Vai no resumo do dia para o síndico.</p>
+      h += `<button class="btn ok" id="concluir">✔ Concluir</button><p class="nota">Vai no resumo da semana para o síndico.</p>
         <a class="btn sec" href="#/tarefa/${id}">Voltar e corrigir</a>`;
       $app.innerHTML = h;
       document.getElementById("concluir").addEventListener("click", () => concluir(t, r, texto, fotos.length));
@@ -372,22 +369,20 @@ const TELAS = {
     $app.querySelectorAll("[data-mes]").forEach(b => b.addEventListener("click", () => enviarArquivo(regs, b.dataset.mes)));
   },
 
-  // Resumo de tudo o que foi feito desde o último resumo enviado, separado por dia
-  async resumo() {
-    const regs = (await DB.ler("registros")) || [];
-    const novos = regs.filter(x => !x.noResumo).reverse();
-    const texto = await textoResumo(novos);
-    let h = `<h1>📤 Resumo do dia</h1>`;
-    if (!novos.length) h += `<div class="tudo-ok">✅ Nada novo para enviar.</div>`;
-    h += `<pre class="msg">${esc(texto)}</pre>`;
-    h += `<p class="passo">1. Enviar a mensagem</p><a class="btn zap" href="${linkZap(texto)}" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>
+  // Resumo da semana (toda segunda) ou total do mês (no dia 1º)
+  async relatorio(tipo) {
+    const e = await estado();
+    const rel = (await relatoriosDevidos(e, agora())).find(x => x.tipo === tipo);
+    if (!rel) return (location.hash = "#/");
+    const texto = await textoRelatorio(rel, e);
+    let h = `<h1>📤 ${rel.titulo}</h1><pre class="msg">${esc(texto)}</pre>
+      <p class="passo">1. Enviar a mensagem</p><a class="btn zap" href="${linkZap(texto)}" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>
       <p class="passo">2. Depois de enviar</p><button class="btn ok" id="enviado">✔ Já enviei</button>`;
     $app.innerHTML = h;
     document.getElementById("enviado").addEventListener("click", async () => {
-      const ids = new Set(novos.map(x => x.quando));
-      const todos = (await DB.ler("registros")) || [];
-      todos.forEach(x => { if (ids.has(x.quando)) x.noResumo = true; });
-      await DB.gravar("registros", todos);
+      const env = (await DB.ler("relatorios")) || {};
+      env[tipo] = rel.fim;
+      await DB.gravar("relatorios", env);
       location.hash = "#/";
       aviso("Resumo enviado ✔");
     });
@@ -678,8 +673,10 @@ async function compartilharFotos(t, fotos) {
 async function concluir(t, r, texto, nFotos, enviado) {
   const e = await estado();
   const hoje = agora();
+  let chave = null;
   if (t.regra) {
     const p = Agenda.periodoAtual(t, e.feitas[t.id] || {}, e.inicio, hoje);
+    chave = p.chave;
     e.feitas[t.id] = { ...(e.feitas[t.id] || {}), [p.chave]: Agenda.iso(hoje) };
     await DB.gravar("estado", e);
   }
@@ -693,21 +690,21 @@ async function concluir(t, r, texto, nFotos, enviado) {
     await DB.gravar("ultimas:" + t.id, { data: Agenda.iso(hoje), valores, anteriores: ant });
   }
   const regs = (await DB.ler("registros")) || [];
-  regs.unshift({ quando: hoje.toISOString(), dia: Agenda.iso(hoje), hora: hoje.toTimeString().slice(0, 5), id: t.id,
-    titulo: t.titulo, icone: t.icone, texto, curto: resumoCurto(t, r, nFotos, enviado, hoje), noResumo: false });
+  regs.unshift({ quando: hoje.toISOString(), dia: Agenda.iso(hoje), hora: hoje.toTimeString().slice(0, 5), id: t.id, chave,
+    titulo: t.titulo, icone: t.icone, texto, curto: resumoCurto(t, r, nFotos, enviado, hoje) });
   await DB.gravar("registros", regs.slice(0, 3000));
   await DB.gravar("rascunho:" + t.id, {});
   await DB.apagarFotos(t.id);
   location.hash = "#/p/" + t.quem;
-  aviso(enviado ? "Tarefa concluída ✔" : "Tarefa concluída ✔ Vai no resumo do dia.");
+  aviso(enviado ? "Tarefa concluída ✔" : "Tarefa concluída ✔");
 }
 
-// ---------- envio: na hora ou no resumo do dia ----------
+// ---------- envio: na hora ou no resumo da semana ----------
 const naHora = t => ["leituras", "andares", "abastecimento"].includes(t.tipo);
 const temProblema = (t, r) => t.tipo === "inspecao" && t.itens.some(it => ((r.insp || {})[it.id] || {}).status === "prob");
 const linkZap = texto => `https://wa.me/${String(CONFIG.whatsapp || "").replace(/\D/g, "")}?text=${encodeURIComponent(texto)}`;
 
-// Linhas curtas de uma tarefa para o resumo do dia
+// Linhas curtas de uma tarefa para os resumos
 function resumoCurto(t, r, nFotos, enviado, hoje) {
   const L = [];
   if (t.tipo === "rega") {
@@ -737,21 +734,80 @@ function resumoCurto(t, r, nFotos, enviado, hoje) {
   return L;
 }
 
-async function textoResumo(novos) {
-  const hoje = agora();
-  const dias = [...new Set(novos.map(x => x.dia))];
-  const linhas = [`*Maison Lafitte · Resumo do dia*`, `Enviado: ${dataBr(hoje)} ${hoje.toTimeString().slice(0, 5)}`];
-  for (const d of dias) {
-    linhas.push("", `*${diaMes(Agenda.deIso(d))}*`);
-    for (const x of novos.filter(x => x.dia === d)) linhas.push(`${x.icone} ${x.titulo} (${x.hora})`, ...x.curto.map(l => "   " + l));
+// Resumos para o síndico: da semana (seg a dom) toda segunda; do mês no dia 1º.
+// Se não for enviado, o próximo cobre também o período que ficou para trás.
+async function relatoriosDevidos(e, hoje) {
+  const env = (await DB.ler("relatorios")) || {};
+  const h = Agenda.semHora(hoje), lista = [];
+  const desde = fimAnt => fimAnt ? Agenda.somaDias(Agenda.deIso(fimAnt), 1) : Agenda.deIso(e.inicio);
+  const domingo = Agenda.somaDias(h, -(diaSemanaSeg(h) + 1));
+  const iniS = desde(env.semana);
+  if ((domingo - iniS) / 86400000 >= 6) lista.push({ tipo: "semana", titulo: "Resumo da semana", ini: Agenda.iso(iniS), fim: Agenda.iso(domingo) });
+  const fimMes = new Date(h.getFullYear(), h.getMonth(), 0);
+  const iniM = desde(env.mes);
+  if (fimMes >= iniM) {
+    const iniMes = new Date(fimMes.getFullYear(), fimMes.getMonth(), 1);
+    lista.push({ tipo: "mes", titulo: `Total de ${MESES[fimMes.getMonth()]}`, ini: Agenda.iso(iniM > iniMes ? iniM : iniMes), fim: Agenda.iso(fimMes) });
   }
-  const e = await estado();
-  const pend = [];
-  for (const t of TAREFAS.filter(t => t.regra)) {
-    const s = Agenda.situacao(t, e.feitas[t.id] || {}, e.inicio, hoje);
-    if (s.pendentes.length) pend.push(`• ${t.icone} ${t.titulo}${+s.pendentes[0].venc < +Agenda.semHora(hoje) ? ` (era ${diaMes(s.pendentes[0].venc)})` : " (hoje)"}`);
+  return lista;
+}
+
+// Datas em que a tarefa devia ser feita entre ini e fim (Date), com a chave usada em estado.feitas
+function ocorrencias(t, ini, fim) {
+  const g = t.regra, lista = [];
+  if (g.tipo === "semana") {
+    for (let d = ini; d <= fim; d = Agenda.somaDias(d, 1)) if (g.dias.includes(diaSemanaSeg(d))) lista.push({ chave: Agenda.iso(d), venc: d });
+  } else if (g.tipo === "datas") {
+    for (const s of g.datas) { const d = Agenda.somaDias(Agenda.deIso(s), g.desloc || 0); if (d >= ini && d <= fim) lista.push({ chave: Agenda.iso(d), venc: d }); }
+  } else {
+    for (let a = ini.getFullYear(), m = ini.getMonth(); a < fim.getFullYear() || (a === fim.getFullYear() && m <= fim.getMonth()); m === 11 ? (a++, m = 0) : m++) {
+      const d = Agenda.vencimento(g, a, m);
+      if ((!g.meses || g.meses.includes(m)) && d >= ini && d <= fim) lista.push({ chave: `${a}-${String(m + 1).padStart(2, "0")}`, venc: d });
+    }
   }
-  linhas.push("", pend.length ? "*Ainda não feito:*" : "✅ Nenhuma tarefa atrasada.", ...pend);
+  return lista;
+}
+
+async function textoRelatorio(rel, e) {
+  const ini = Agenda.deIso(rel.ini), fim = Agenda.deIso(rel.fim), mes = rel.tipo === "mes";
+  const regs = ((await DB.ler("registros")) || []).filter(x => x.dia >= rel.ini && x.dia <= rel.fim).reverse();
+  const dm = d => dataBr(d).slice(0, 5);
+  const linhas = [`*Maison Lafitte · ${rel.titulo}*`, `${dataBr(ini)} a ${dataBr(fim)}`];
+  for (const t of TAREFAS) {
+    const oc = t.regra ? ocorrencias(t, ini, fim) : [];
+    const feitos = regs.filter(x => x.id === t.id);
+    if (!oc.length && !feitos.length) continue;
+    const feitas = (e.feitas || {})[t.id] || {};
+    const nao = oc.filter(o => !feitas[o.chave]);
+    linhas.push("", `${t.icone} *${t.titulo}*`);
+    if (mes) {
+      linhas.push(oc.length ? `   ${nao.length ? "⚠️" : "✅"} ${oc.length - nao.length} de ${oc.length} feitas` : `   ${feitos.length} ${feitos.length === 1 ? "vez" : "vezes"}`);
+      if (nao.length) linhas.push(`   ❌ Não feita: ${nao.map(o => dm(o.venc)).join(", ")}`);
+      if (t.tipo === "checklist") {
+        const inc = feitos.filter(x => /^⚠️/.test(x.curto[0] || "")).length;
+        if (inc) linhas.push(`   ⚠️ Incompleta em ${inc} ${inc === 1 ? "dia" : "dias"}`);
+      }
+      for (const x of feitos) for (const l of x.curto)
+        if (/^(⚠️ [^0-9]|Obs\.)/.test(l) || (t.tipo !== "checklist" && /^❌/.test(l))) linhas.push(`   ${dm(Agenda.deIso(x.dia))} ${l}`);
+    } else {
+      // Dias em que tudo foi feito ficam numa linha só; o resto, um por linha
+      const ok = [], resto = [];
+      for (const o of oc) {
+        const x = feitos.find(x => x.chave === o.chave);
+        const noDia = !x || x.dia === Agenda.iso(o.venc);
+        if (feitas[o.chave] && noDia && (!x || (x.curto.length === 1 && /^✅/.test(x.curto[0])))) ok.push(dm(o.venc));
+        else resto.push({ o, x });
+      }
+      if (ok.length) linhas.push(`   ✅ ${ok.join(", ")}`);
+      for (const { o, x } of resto) {
+        if (!x && !feitas[o.chave]) linhas.push(`   ${dm(o.venc)}: ❌ não feita`);
+        else if (!x) linhas.push(`   ${dm(o.venc)}: ✅ feita em ${dm(Agenda.deIso(feitas[o.chave]))}`);
+        else linhas.push(`   ${dm(o.venc)}: ${x.curto[0] || "✅ feita"}${x.dia !== Agenda.iso(o.venc) ? ` (em ${dm(Agenda.deIso(x.dia))})` : ""}`, ...x.curto.slice(1).map(l => "      " + l));
+      }
+      for (const x of oc.length ? [] : feitos) linhas.push(`   ${dm(Agenda.deIso(x.dia))}: ${x.curto[0] || "✅ feita"}`, ...x.curto.slice(1).map(l => "      " + l));
+    }
+  }
+  if (linhas.length === 2) linhas.push("", "Nenhuma tarefa no período.");
   return linhas.join("\n");
 }
 
@@ -812,7 +868,7 @@ async function rota() {
   if (tela === "tarefa") await TELAS.tarefa(id);
   else if (tela === "enviar") await TELAS.enviar(id);
   else if (tela === "historico") await TELAS.historico();
-  else if (tela === "resumo") await TELAS.resumo();
+  else if (tela === "relatorio") await TELAS.relatorio(id);
   else if (tela === "p") await TELAS.pessoa(id);
   else await TELAS.inicio();
 }
