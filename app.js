@@ -113,9 +113,15 @@ const TELAS = {
         <span class="q">${n ? (n === 1 ? "1 tarefa" : n + " tarefas") : "Em dia ✅"}</span></a>`;
     }
     h += `</div>`;
+    const novos = ((await DB.ler("registros")) || []).filter(x => !x.noResumo);
+    if (novos.length) {
+      const atrasado = novos.some(x => x.dia < Agenda.iso(hoje));
+      h += `<a class="card ${atrasado ? "pend" : ""}" href="#/resumo"><span class="ic">📤</span><span class="tx"><b>Enviar resumo do dia</b>
+        <span class="q">${atrasado ? "Tem resumo de dia anterior sem enviar" : `${novos.length} ${novos.length === 1 ? "tarefa feita" : "tarefas feitas"} hoje`}</span></span><span class="seta">›</span></a>`;
+    }
     if ("Notification" in window && Notification.permission !== "granted")
       h += `<button class="btn sec" id="avisos">🔔 Ativar avisos</button>`;
-    h += `<div class="rodape"><a href="#/historico">Histórico de envios</a> · versão ${CONFIG.versao}</div>`;
+    h += `<div class="rodape"><a href="#/historico">Histórico</a> · versão ${CONFIG.versao}</div>`;
     $app.innerHTML = h;
     document.getElementById("avisos")?.addEventListener("click", ativarAvisos);
     atualizarSelo(total);
@@ -177,7 +183,7 @@ const TELAS = {
           <input id="c${i}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="next" value="${esc(v)}" placeholder="números"></div>
           <div class="res"></div>${it.dica ? `<div class="dica">📷 ${esc(it.dica)}</div>` : ""}</div>`;
       });
-      h += obsEFotos(r);
+      h += obsEFotos(r, t);
       $app.innerHTML = h;
       const atualiza = (i) => {
         const it = t.itens[i], box = $app.querySelector(`.item[data-i="${i}"]`);
@@ -202,7 +208,7 @@ const TELAS = {
       });
     } else if (t.tipo === "andares") {
       h += await telaAndares(t, r);
-      h += obsEFotos(r);
+      h += obsEFotos(r, t);
       $app.innerHTML = h;
       ligarAndares(t, r);
     } else if (t.tipo === "rega") {
@@ -219,7 +225,7 @@ const TELAS = {
           ${g.chuva ? `<button type="button" data-v="chuva" class="${v === "chuva" ? "sel-res" : ""}">🌧️ Choveu</button>` : ""}</div></div>`;
       });
       h += `<p class="nota">🌧️ Choveu ontem ou hoje? Não precisa regar.</p>`;
-      h += obsEFotos(r);
+      h += obsEFotos(r, t);
       $app.innerHTML = h;
       $app.querySelectorAll(".grupo-rega").forEach(box => box.querySelectorAll("[data-v]").forEach(b => b.addEventListener("click", () => {
         r.rega[box.dataset.g] = b.dataset.v;
@@ -227,7 +233,7 @@ const TELAS = {
         salvarRascunho(id, r);
       })));
     } else if (t.tipo === "feito") {
-      h += obsEFotos(r).replace("Revisar e enviar", "✅ Feito: enviar");
+      h += obsEFotos(r, t).replace("Revisar e concluir", "✅ Feito");
       $app.innerHTML = h;
     } else if (t.tipo === "checklist") {
       r.feitos = r.feitos || {};
@@ -242,7 +248,7 @@ const TELAS = {
           <span class="hora">${ini}<small>até ${fim}</small></span><span class="tx">${esc(txt)}</span><span class="box">${r.feitos[i] ? "✔" : ""}</span></button>`;
       }).join("")}</div>
       <p class="nota">Toque na atividade quando terminar.</p>`;
-      h += obsEFotos(r);
+      h += obsEFotos(r, t);
       $app.innerHTML = h;
       $app.querySelectorAll(".check").forEach(b => b.addEventListener("click", () => {
         const i = b.dataset.i;
@@ -261,7 +267,7 @@ const TELAS = {
           <button type="button" data-s="prob" class="${v.status === "prob" ? "sel-prob" : ""}">⚠️ Problema</button></div>
           <textarea placeholder="O que viu?" ${v.status === "prob" ? "" : "hidden"}>${esc(v.texto)}</textarea></div>`;
       }
-      h += obsEFotos(r);
+      h += obsEFotos(r, t);
       $app.innerHTML = h;
       $app.querySelectorAll(".item[data-id]").forEach(box => {
         const v = r.insp[box.dataset.id] = r.insp[box.dataset.id] || {};
@@ -286,7 +292,7 @@ const TELAS = {
         <div class="campo"><label for="a-kg">Quantos kg?</label><input id="a-kg" class="grande" inputmode="decimal" value="${esc(a.kg)}"></div>
         <div class="campo"><label for="a-valor">Preço do kg (R$)</label><input id="a-valor" class="grande" inputmode="decimal" value="${esc(a.valor)}"></div>
         <p class="nota">📷 Tire foto do canhoto.</p>`;
-      h += obsEFotos(r);
+      h += obsEFotos(r, t);
       $app.innerHTML = h;
       for (const [campo, el] of [["data", "a-data"], ["kg", "a-kg"], ["valor", "a-valor"]])
         document.getElementById(el).addEventListener("input", ev => { a[campo] = ev.target.value; salvarRascunho(id, r); });
@@ -319,9 +325,19 @@ const TELAS = {
     const { texto, falta } = await montarMensagem(t, e, r, fotos.length);
     const numero = String(CONFIG.whatsapp || "").replace(/\D/g, "");
     const link = `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
-    let h = `<h1>${t.icone} Revisar e enviar</h1>`;
+    // Leituras e caminhão de gás vão na hora. O resto vai no resumo do dia, a não ser que tenha problema ou foto.
+    const urgente = !naHora(t) && (fotos.length || temProblema(t, r));
+    let h = `<h1>${t.icone} ${naHora(t) || urgente ? "Revisar e enviar" : "Revisar e concluir"}</h1>`;
     if (falta) h += `<p class="card pend"><b>Atenção</b><span class="q">${esc(falta)}</span></p>`;
     h += `<pre class="msg">${esc(texto)}</pre>`;
+    if (!naHora(t) && !urgente) {
+      h += `<button class="btn ok" id="concluir">✔ Concluir</button><p class="nota">Vai no resumo do dia para o síndico.</p>
+        <a class="btn sec" href="#/tarefa/${id}">Voltar e corrigir</a>`;
+      $app.innerHTML = h;
+      document.getElementById("concluir").addEventListener("click", () => concluir(t, r, texto, fotos.length));
+      return;
+    }
+    if (urgente) h += `<p class="nota">${temProblema(t, r) ? "⚠️ Tem problema: avise o síndico agora." : "📷 Tem foto: envie agora."}</p>`;
     h += `<p class="passo">1. Enviar a mensagem</p><a class="btn zap" id="zap" href="${link}" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>`;
     if (fotos.length) {
       h += `<p class="passo">2. Enviar as fotos (${fotos.length})</p>
@@ -333,18 +349,48 @@ const TELAS = {
       <a class="btn sec" href="#/tarefa/${id}">Voltar e corrigir</a>`;
     $app.innerHTML = h;
     document.getElementById("enviar-fotos")?.addEventListener("click", () => compartilharFotos(t, fotos));
-    document.getElementById("concluir").addEventListener("click", () => concluir(t, r, texto));
+    document.getElementById("concluir").addEventListener("click", () => concluir(t, r, texto, fotos.length, true));
   },
 
   async historico() {
-    const hist = (await DB.ler("historico")) || [];
-    let h = `<h1>Histórico de envios</h1><p class="sub">Últimos envios feitos por este celular.</p>`;
-    if (!hist.length) h += `<p class="nota">Nada enviado ainda.</p>`;
-    hist.forEach((x, i) => {
-      h += `<details class="card"><summary><b style="display:inline">${esc(x.titulo)}</b> <span class="q">· ${esc(x.quando)}</span></summary>
-        <pre class="msg">${esc(x.texto)}</pre><a class="btn zap" href="https://wa.me/${String(CONFIG.whatsapp || "").replace(/\D/g, "")}?text=${encodeURIComponent(x.texto)}" target="_blank" rel="noopener">Reenviar</a></details>`;
+    const regs = (await DB.ler("registros")) || [];
+    let h = `<h1>Histórico</h1><p class="sub">Tudo o que foi feito neste celular.</p>`;
+    if (!regs.length) h += `<p class="nota">Nada feito ainda.</p>`;
+    else {
+      const mes = Agenda.iso(agora()).slice(0, 7);
+      const ant = Agenda.iso(new Date(agora().getFullYear(), agora().getMonth() - 1, 1)).slice(0, 7);
+      h += `<button class="btn zap" data-mes="${mes}">📄 Enviar arquivo de ${refMes(mes)}</button>`;
+      if (regs.some(x => x.dia.startsWith(ant))) h += `<button class="btn sec" data-mes="${ant}">📄 Enviar arquivo de ${refMes(ant)}</button>`;
+    }
+    let dia = "";
+    regs.slice(0, 300).forEach((x, i) => {
+      if (x.dia !== dia) { dia = x.dia; h += `<h2>${diaMes(Agenda.deIso(dia))}</h2>`; }
+      h += `<details class="card"><summary><b style="display:inline">${x.icone} ${esc(x.titulo)}</b> <span class="q">· ${esc(x.hora)}</span></summary>
+        <pre class="msg">${esc(x.texto)}</pre><a class="btn zap" href="${linkZap(x.texto)}" target="_blank" rel="noopener">Enviar de novo</a></details>`;
     });
     $app.innerHTML = h;
+    $app.querySelectorAll("[data-mes]").forEach(b => b.addEventListener("click", () => enviarArquivo(regs, b.dataset.mes)));
+  },
+
+  // Resumo de tudo o que foi feito desde o último resumo enviado, separado por dia
+  async resumo() {
+    const regs = (await DB.ler("registros")) || [];
+    const novos = regs.filter(x => !x.noResumo).reverse();
+    const texto = await textoResumo(novos);
+    let h = `<h1>📤 Resumo do dia</h1>`;
+    if (!novos.length) h += `<div class="tudo-ok">✅ Nada novo para enviar.</div>`;
+    h += `<pre class="msg">${esc(texto)}</pre>`;
+    h += `<p class="passo">1. Enviar a mensagem</p><a class="btn zap" href="${linkZap(texto)}" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>
+      <p class="passo">2. Depois de enviar</p><button class="btn ok" id="enviado">✔ Já enviei</button>`;
+    $app.innerHTML = h;
+    document.getElementById("enviado").addEventListener("click", async () => {
+      const ids = new Set(novos.map(x => x.quando));
+      const todos = (await DB.ler("registros")) || [];
+      todos.forEach(x => { if (ids.has(x.quando)) x.noResumo = true; });
+      await DB.gravar("registros", todos);
+      location.hash = "#/";
+      aviso("Resumo enviado ✔");
+    });
   },
 };
 
@@ -516,11 +562,11 @@ function cartao(t, classe, q) {
     <span class="tx"><b>${esc(t.titulo)}</b><span class="q">${esc(q)}</span></span><span class="seta">›</span></a>`;
 }
 
-function obsEFotos(r) {
+function obsEFotos(r, t) {
   return `<h2>Observações</h2><textarea id="obs" placeholder="Opcional">${esc(r.obs)}</textarea>
     <h2>Fotos</h2><div class="fotos" id="fotos"></div>
     <label class="btn sec">📷 Tirar ou escolher foto<input type="file" id="foto" accept="image/*" multiple></label>
-    <button class="btn" id="revisar">Revisar e enviar</button>`;
+    <button class="btn" id="revisar">${naHora(t) ? "Revisar e enviar" : "Revisar e concluir"}</button>`;
 }
 
 async function mostrarFotos(id) {
@@ -629,7 +675,7 @@ async function compartilharFotos(t, fotos) {
   aviso("As fotos foram salvas no celular. Anexe-as na conversa do WhatsApp.");
 }
 
-async function concluir(t, r, texto) {
+async function concluir(t, r, texto, nFotos, enviado) {
   const e = await estado();
   const hoje = agora();
   if (t.regra) {
@@ -646,13 +692,83 @@ async function concluir(t, r, texto) {
     });
     await DB.gravar("ultimas:" + t.id, { data: Agenda.iso(hoje), valores, anteriores: ant });
   }
-  const hist = (await DB.ler("historico")) || [];
-  hist.unshift({ titulo: t.titulo, quando: `${dataBr(hoje)} ${hoje.toTimeString().slice(0, 5)}`, texto });
-  await DB.gravar("historico", hist.slice(0, 40));
+  const regs = (await DB.ler("registros")) || [];
+  regs.unshift({ quando: hoje.toISOString(), dia: Agenda.iso(hoje), hora: hoje.toTimeString().slice(0, 5), id: t.id,
+    titulo: t.titulo, icone: t.icone, texto, curto: resumoCurto(t, r, nFotos, enviado, hoje), noResumo: false });
+  await DB.gravar("registros", regs.slice(0, 3000));
   await DB.gravar("rascunho:" + t.id, {});
   await DB.apagarFotos(t.id);
   location.hash = "#/p/" + t.quem;
-  aviso("Tarefa concluída ✔");
+  aviso(enviado ? "Tarefa concluída ✔" : "Tarefa concluída ✔ Vai no resumo do dia.");
+}
+
+// ---------- envio: na hora ou no resumo do dia ----------
+const naHora = t => ["leituras", "andares", "abastecimento"].includes(t.tipo);
+const temProblema = (t, r) => t.tipo === "inspecao" && t.itens.some(it => ((r.insp || {})[it.id] || {}).status === "prob");
+const linkZap = texto => `https://wa.me/${String(CONFIG.whatsapp || "").replace(/\D/g, "")}?text=${encodeURIComponent(texto)}`;
+
+// Linhas curtas de uma tarefa para o resumo do dia
+function resumoCurto(t, r, nFotos, enviado, hoje) {
+  const L = [];
+  if (t.tipo === "rega") {
+    const gs = gruposRega().filter(g => g.hoje), v = r.rega || {};
+    const ok = gs.filter(g => v[g.i] === "ok").length, chuva = gs.filter(g => v[g.i] === "chuva").length;
+    L.push(`✅ ${ok} de ${gs.length} regados${chuva ? `, ${chuva} não (choveu)` : ""}`);
+    const nao = gs.filter(g => !v[g.i]).map(g => g.g.nome);
+    if (nao.length) L.push(`❌ Não regado: ${nao.join(", ")}`);
+  } else if (t.tipo === "feito") {
+    L.push("✅ Feita");
+  } else if (t.tipo === "checklist") {
+    const itens = (LIMPEZA[diaSemanaSeg(hoje)] || []).map(([ini, , txt, tipo], i) => ({ ini, txt, tipo, i })).filter(x => x.tipo !== "g");
+    const nao = itens.filter(x => !(r.feitos || {})[x.i]);
+    L.push(`${nao.length ? "⚠️" : "✅"} ${itens.length - nao.length} de ${itens.length} feitas`);
+    if (nao.length) L.push(`❌ Não feito: ${nao.map(x => `${x.ini} ${x.txt}`).join("; ")}`);
+  } else if (t.tipo === "inspecao") {
+    const v = r.insp || {};
+    const prob = t.itens.filter(it => (v[it.id] || {}).status === "prob");
+    const sem = t.itens.filter(it => !(v[it.id] || {}).status);
+    if (!prob.length && !sem.length) L.push("✅ Tudo normal");
+    prob.forEach(it => L.push(`⚠️ ${it.nome}${v[it.id].texto ? ": " + v[it.id].texto.trim() : ""}`));
+    if (sem.length) L.push(`❌ Não verificado: ${sem.map(it => it.nome).join(", ")}`);
+  }
+  if (enviado) L.push(`📤 Enviada na hora`);
+  if (r.obs && r.obs.trim()) L.push(`Obs.: ${r.obs.trim()}`);
+  if (nFotos) L.push(`📷 ${nFotos} ${nFotos === 1 ? "foto" : "fotos"}`);
+  return L;
+}
+
+async function textoResumo(novos) {
+  const hoje = agora();
+  const dias = [...new Set(novos.map(x => x.dia))];
+  const linhas = [`*Maison Lafitte · Resumo do dia*`, `Enviado: ${dataBr(hoje)} ${hoje.toTimeString().slice(0, 5)}`];
+  for (const d of dias) {
+    linhas.push("", `*${diaMes(Agenda.deIso(d))}*`);
+    for (const x of novos.filter(x => x.dia === d)) linhas.push(`${x.icone} ${x.titulo} (${x.hora})`, ...x.curto.map(l => "   " + l));
+  }
+  const e = await estado();
+  const pend = [];
+  for (const t of TAREFAS.filter(t => t.regra)) {
+    const s = Agenda.situacao(t, e.feitas[t.id] || {}, e.inicio, hoje);
+    if (s.pendentes.length) pend.push(`• ${t.icone} ${t.titulo}${+s.pendentes[0].venc < +Agenda.semHora(hoje) ? ` (era ${diaMes(s.pendentes[0].venc)})` : " (hoje)"}`);
+  }
+  linhas.push("", pend.length ? "*Ainda não feito:*" : "✅ Nenhuma tarefa atrasada.", ...pend);
+  return linhas.join("\n");
+}
+
+// Arquivo de texto com tudo o que foi feito no mês, para guardar ou repassar
+async function enviarArquivo(regs, mes) {
+  const doMes = regs.filter(x => x.dia.startsWith(mes)).reverse();
+  const corpo = [`Maison Lafitte · Lafitte em Dia · ${refMes(mes)}`, ""];
+  for (const x of doMes) corpo.push(`===== ${dataBr(Agenda.deIso(x.dia))} ${x.hora} · ${x.titulo}`, x.texto, "");
+  const arq = new File([corpo.join("\n")], `Lafitte_em_Dia_${mes}.txt`, { type: "text/plain" });
+  if (navigator.canShare && navigator.canShare({ files: [arq] })) {
+    try { await navigator.share({ files: [arq], text: `Lafitte em Dia · ${refMes(mes)}` }); }
+    catch (err) { if (err.name !== "AbortError") aviso("Não foi possível abrir o envio do arquivo."); }
+    return;
+  }
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(arq); link.download = arq.name; link.click();
+  aviso("O arquivo foi salvo no celular.");
 }
 
 function aviso(txt) {
@@ -671,22 +787,6 @@ async function ativarAvisos() {
   if (perm !== "granted") return aviso("Os avisos não foram permitidos.");
   await registrarVerificacao();
   aviso("Avisos ativados.");
-  if (CONFIG.teste) {
-  const barra = document.createElement("div");
-  barra.className = "teste";
-  barra.innerHTML = `<label for="data-teste">🧪 Teste: simular o dia</label>
-    <input type="date" id="data-teste" value="${dataTeste || Agenda.iso(new Date())}"><button type="button" id="data-hoje">Hoje</button>`;
-  document.querySelector("header").after(barra);
-  const mudar = v => {
-    dataTeste = v && v !== Agenda.iso(new Date()) ? v : null;
-    try { dataTeste ? localStorage.setItem("dataTeste", dataTeste) : localStorage.removeItem("dataTeste"); } catch {}
-    document.getElementById("data-teste").value = dataTeste || Agenda.iso(new Date());
-    rota();
-  };
-  document.getElementById("data-teste").addEventListener("change", ev => mudar(ev.target.value));
-  document.getElementById("data-hoje").addEventListener("click", () => mudar(null));
-}
-rota();
 }
 
 // Pede ao Android para abrir o app em segundo plano periodicamente e avisar das tarefas pendentes
@@ -712,6 +812,7 @@ async function rota() {
   if (tela === "tarefa") await TELAS.tarefa(id);
   else if (tela === "enviar") await TELAS.enviar(id);
   else if (tela === "historico") await TELAS.historico();
+  else if (tela === "resumo") await TELAS.resumo();
   else if (tela === "p") await TELAS.pessoa(id);
   else await TELAS.inicio();
 }
