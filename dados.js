@@ -3,14 +3,14 @@
 // Para atualizar: troque os valores de "ant" (última leitura) e "ant2" (penúltima) e a data em "antData".
 
 const CONFIG = {
-  versao: "2026.10.25-13",
+  versao: "2026.10.27-1",
   // Número do síndico com DDI e DDD, só dígitos (ex.: 5541999999999).
   // Vazio: o WhatsApp abre e pergunta para quem enviar.
   whatsapp: "5541998767915",
   // Tarefas com data anterior a esta não aparecem como atrasadas.
-  inicio: "2026-10-25",
+  inicio: "2026-10-28",
   // Versão de teste: mostra a barra para simular outro dia. Na versão do celular fica false.
-  teste: true,
+  teste: false,
 };
 
 const UNIDADES = [101, 102, 201, 202, 301, 302, 401, 402, 501, 502, 601, 602, 701, 702, 801, 802,

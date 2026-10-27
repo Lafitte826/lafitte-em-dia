@@ -908,4 +908,12 @@ if (CONFIG.teste) {
   document.getElementById("data-teste").addEventListener("change", ev => mudar(ev.target.value));
   document.getElementById("data-hoje").addEventListener("click", () => mudar(null));
 }
-rota();
+
+// Versão final: ao mudar a data de início, o app começa limpo (apaga o que foi feito no teste)
+(async () => {
+  if (!CONFIG.teste && (await DB.ler("inicioUsado")) !== CONFIG.inicio) {
+    await DB.limpar();
+    await DB.gravar("inicioUsado", CONFIG.inicio);
+  }
+  rota();
+})();

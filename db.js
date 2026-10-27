@@ -31,6 +31,7 @@ const DB = (() => {
     fotos: tarefa => op("fotos", "readonly", s => s.index("tarefa").getAll(tarefa)),
     addFoto: foto => op("fotos", "readwrite", s => s.add(foto)),
     apagarFoto: id => op("fotos", "readwrite", s => s.delete(id)),
+    limpar: () => Promise.all([op("kv", "readwrite", s => s.clear()), op("fotos", "readwrite", s => s.clear())]),
     async apagarFotos(tarefa) {
       for (const f of await DB.fotos(tarefa)) await DB.apagarFoto(f.id);
     },
