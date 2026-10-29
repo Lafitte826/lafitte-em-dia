@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0f2a43"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Geofone"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Geofone ECO200</title>
+<style>
+/* Conceito: caderno de campo do operador de rede. Cabeçalho fixo com as etapas; números de leitura em fonte de visor; resultado sempre em cor (verde, amarelo, vermelho). */
+:root{
+  --bg:#f1f5f6; --surface:#ffffff; --fg:#0f2a43; --muted:#55646f; --line:#d5dee2;
+  --accent:#0e7c86; --accent-ink:#ffffff; --soft:#e3f1f2;
+  --warn:#f2b705; --warn-ink:#2b2200; --warn-bg:#fff6d6; --bad:#b4410f; --bad-bg:#fde8df; --ok:#1b7f4b; --ok-bg:#def3e6;
+  --lcd1:#2fa3ad; --lcd2:#1a7b86; --lcd-ink:#f4ffff;
+  --f-head:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif; --f-body:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif; --f-mono:ui-monospace,'SF Mono',Menlo,Consolas,'Courier New',monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0a1822; --surface:#11242f; --fg:#e7eff3; --muted:#9db1be; --line:#233845;
+  --accent:#4cc3cd; --accent-ink:#06222a; --soft:#12343b;
+  --warn:#f2b705; --warn-ink:#2b2200; --warn-bg:#3a3110; --bad:#ff9468; --bad-bg:#3d2018; --ok:#4cc38a; --ok-bg:#12362a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0a1822; --surface:#11242f; --fg:#e7eff3; --muted:#9db1be; --line:#233845;
+  --accent:#4cc3cd; --accent-ink:#06222a; --soft:#12343b;
+  --warn:#f2b705; --warn-ink:#2b2200; --warn-bg:#3a3110; --bad:#ff9468; --bad-bg:#3d2018; --ok:#4cc38a; --ok-bg:#12362a; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:17px/1.55 var(--f-body);margin:0;padding-block:0 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.wrap{max-width:900px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-head);line-height:1.15;text-wrap:balance;margin:0}
+h2{font-size:28px;margin-bottom:6px} h3{font-size:20px}
+p{margin:0}
+.muted{color:var(--muted)} .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding:10px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;max-width:900px;margin:0 auto}
+.brand{font-family:var(--f-head);font-weight:700;font-size:18px}
+.brand small{display:block;font:600 12px var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.who{display:flex;gap:8px;align-items:center;font-size:14px}
+.who input{width:170px}
+nav{display:flex;gap:2px;overflow-x:auto;max-width:900px;margin:8px auto 0;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav a{flex:0 0 auto;padding:10px 14px;color:var(--muted);text-decoration:none;font-weight:600;font-size:15px;border-bottom:3px solid transparent}
+nav a[aria-current="page"]{color:var(--fg);border-color:var(--accent)}
+section.view{padding-top:26px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+input,select,textarea,button,a.btn{font:inherit;color:var(--fg)}
+input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0;width:100%}
+label{display:block;font-size:15px;font-weight:600;margin-bottom:4px}
+button,a.btn{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px 16px;font-weight:600;min-height:48px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+button.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:default}
+:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:13px;font-weight:600;border:1px solid var(--line)}
+.pill.ok{background:var(--ok);color:#fff;border-color:var(--ok)} .pill.warn{background:var(--warn);color:var(--warn-ink);border-color:var(--warn)} .pill.bad{background:var(--bad);color:#fff;border-color:var(--bad)}
+.note{border-left:5px solid var(--warn);background:var(--surface);border-radius:10px;padding:12px 14px;border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.res{border-radius:14px;padding:14px 16px;border:2px solid var(--line);font-weight:600}
+.res.ok{background:var(--ok-bg);border-color:var(--ok)} .res.warn{background:var(--warn-bg);border-color:var(--warn)} .res.bad{background:var(--bad-bg);border-color:var(--bad)}
+.res .t{font:700 22px var(--f-head);display:block}
+.res .s{font-weight:400;display:block;margin-top:2px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}
+th{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.lcd{background:linear-gradient(160deg,var(--lcd1),var(--lcd2));color:var(--lcd-ink);border-radius:14px;padding:12px 14px;border:5px solid #1b2a33}
+.lcd .t{font:600 13px var(--f-mono);letter-spacing:.1em;opacity:.9;display:flex;justify-content:space-between}
+.big{font:600 44px/1 var(--f-mono)}
+.bignum{font:600 34px/1.1 var(--f-mono);color:var(--accent);display:block}
+details.mod{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:12px}
+details.mod summary{cursor:pointer;padding:16px 18px;display:flex;gap:12px;align-items:center;list-style:none;font-family:var(--f-head);font-weight:700;font-size:20px}
+details.mod summary::-webkit-details-marker{display:none}
+details.mod summary .n{font:600 14px var(--f-mono);color:var(--accent)}
+details.mod .body{padding:0 18px 18px;display:grid;gap:12px}
+details.mod[open] summary{border-bottom:1px solid var(--line)}
+ul.tick,ol.steps{margin:0;padding-left:22px;display:grid;gap:8px}
+ol.steps li::marker{font-family:var(--f-mono);font-weight:600;color:var(--accent)}
+.opt{display:block;width:100%;text-align:left;margin-top:8px;font-weight:600;min-height:54px;justify-content:flex-start}
+.opt.right{border-color:var(--ok);background:var(--ok-bg)} .opt.wrong{border-color:var(--bad);background:var(--bad-bg)} .opt.sel{border-color:var(--accent);background:var(--soft)}
+.bar{height:8px;border-radius:8px;background:var(--line);overflow:hidden} .bar i{display:block;height:100%;background:var(--accent)}
+.pts{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.pts button{padding:10px 0;font-family:var(--f-mono)}
+.pts button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chk{display:flex;gap:10px;align-items:flex-start;margin:0 0 10px;font-weight:400}
+.chk input{width:22px;height:22px;margin-top:2px;flex:0 0 auto;accent-color:var(--accent)}
+.item{display:grid;gap:6px;padding:12px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border:0}
+.status{font-size:14px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;border:2px solid var(--line);border-radius:99px;padding:6px 12px;font:600 18px var(--f-mono);background:var(--surface)}
+.chip.ok{border-color:var(--ok);background:var(--ok-bg)} .chip.bad{border-color:var(--bad);background:var(--bad-bg)}
+.dots{display:flex;gap:6px;flex-wrap:wrap}
+.dots i{width:16px;height:16px;border-radius:50%;background:var(--line)}
+.dots i.ok{background:var(--ok)} .dots i.warn{background:var(--warn)} .dots i.bad{background:var(--bad)}
+.modes{display:flex;gap:6px;max-width:900px;margin:10px auto 0}
+.modes a{padding:6px 16px;border-radius:99px;border:1px solid var(--line);font-weight:600;text-decoration:none;color:var(--muted);font-size:15px}
+.modes a[aria-current="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.choice{display:grid;gap:2px;text-align:left;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--fg);text-decoration:none}
+.choice b{font:700 22px var(--f-head)} .choice span{color:var(--muted)}
+.choice.main{border:2px solid var(--accent)}
+.logo{width:96px;height:96px;justify-self:center}
+a.brandlink{color:inherit;text-decoration:none}
+@media (max-width:560px){h2{font-size:24px}.who input{width:130px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head><body>
+
+<header>
+  <div class="top">
+    <a class="brand brandlink" href="#inicio"><small>SAMAE Andirá</small>Geofone ECO200</a>
+    <div class="who"><label for="nome" style="margin:0">Seu nome</label><input id="nome" autocomplete="name" placeholder="Nome do operador"></div>
+  </div>
+  <div class="modes"><a href="#treinar" id="m-tr">Treinamento</a><a href="#campo" id="m-tb">Trabalho</a><a href="#gestor" id="m-ge">Gestor</a></div>
+  <nav id="tabs" aria-label="Etapas"></nav>
+</header>
+
+<div class="wrap">
+
+<!-- INICIO -->
+<section class="view" id="v-inicio">
+  <div style="display:grid;gap:14px;max-width:520px;margin:0 auto">
+    <svg class="logo" viewBox="0 0 512 512" role="img" aria-label="Geofone ECO200"><rect width="512" height="512" rx="112" fill="#0f2a43"/><rect x="156" y="64" width="200" height="384" rx="44" fill="#1b2a33"/><rect x="180" y="100" width="152" height="120" rx="16" fill="#2a9ea8"/><path d="M192 162 q15 -44 30 0 t30 0 t30 0 t30 0" stroke="#e8ffff" stroke-width="8" fill="none" stroke-linecap="round"/><rect x="180" y="244" width="152" height="176" rx="22" fill="#5fa8a0"/><polygon points="256,256 272,278 240,278" fill="#e9862f"/><polygon points="256,408 272,386 240,386" fill="#e9862f"/><polygon points="192,332 214,316 214,348" fill="#e9862f"/><polygon points="320,332 298,316 298,348" fill="#e9862f"/><circle cx="256" cy="332" r="26" fill="#e9862f"/></svg>
+    <h2 style="text-align:center">Geofone ECO200</h2>
+    <p class="muted" style="text-align:center">Treinamento e trabalho de campo para achar vazamentos na rede de água.</p>
+    <a class="choice main" href="#campo"><b>Trabalho</b><span>Medir ruas, registrar pontos e enviar relatório</span></a>
+    <a class="choice" href="#treinar"><b>Treinamento</b><span>Aprender, fazer a prova e treinar no simulador e no cavalete</span></a>
+    <a class="choice" href="#gestor"><b>Gestor</b><span>Enviar a lista de ruas ao técnico e receber os dados</span></a>
+    <p class="muted status" style="text-align:center">Funciona sem internet. O envio é por WhatsApp ou outro meio, como texto.</p>
+  </div>
+</section>
+
+<!-- GESTOR -->
+<section class="view" id="v-gestor" hidden>
+  <h2>Gestor</h2>
+  <p class="muted" style="margin-bottom:14px">Sem rede: tudo vai e volta como texto, por WhatsApp ou outro meio. Os dados recebidos ficam guardados neste aparelho.</p>
+  <div class="grid g2">
+    <div class="card" style="display:grid;gap:10px;align-content:start">
+      <h3>1. Enviar ao técnico</h3>
+      <div><label for="g-tec">Técnico (opcional)</label><input id="g-tec"></div>
+      <div><label for="g-ruas">Ruas da noite, uma por linha</label><textarea id="g-ruas" rows="5"></textarea></div>
+      <div><label for="g-fator">Limiar (× a referência)</label><input id="g-fator" inputmode="decimal"></div>
+      <div class="row"><button class="pri" id="g-gen">Gerar pacote</button></div>
+      <div id="g-out" hidden style="display:grid;gap:8px"><textarea id="g-pkg" rows="6" readonly></textarea><div class="row" id="g-pkg-btns"></div></div>
+    </div>
+    <div class="card" style="display:grid;gap:10px;align-content:start">
+      <h3>2. Receber dados do técnico</h3>
+      <div><label for="g-in">Cole aqui a mensagem completa do técnico</label><textarea id="g-in" rows="6"></textarea></div>
+      <div class="row"><button class="pri" id="g-imp">Importar</button><span class="status muted" id="g-msg"></span></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div class="row" style="justify-content:space-between;margin-bottom:6px"><h3>Turnos recebidos</h3><span class="row"><button id="g-csv-t">CSV dos turnos</button><button id="g-csv-r">CSV dos registros</button></span></div>
+    <div class="tbl"><table><thead><tr><th>Técnico</th><th>Início</th><th>Fim</th><th>No turno</th><th>Ativo</th><th>Ruas</th><th>Pontos</th><th>Susp.</th><th>Prov.</th></tr></thead><tbody id="g-tb"></tbody></table></div>
+    <p class="muted status" id="g-vazio" style="margin-top:8px">Nenhum turno recebido ainda.</p>
+    <p class="muted status" style="margin-top:6px">Tempo ativo: soma dos intervalos de até 20 minutos entre registros.</p>
+  </div>
+  <div class="card" style="margin-top:14px"><h3 style="margin-bottom:6px">Pontos para a equipe de reparo</h3><div id="g-rep"><p class="muted">Nenhum ponto com indício.</p></div>
+    <div class="row" style="margin-top:12px"><button id="g-limpar">Apagar dados recebidos</button></div></div>
+</section>
+
+<!-- 1 TREINAR -->
+<section class="view" id="v-treinar">
+  <h2>Treinamento</h2>
+  <p class="muted" style="margin-bottom:16px">Seis módulos curtos. Leia, faça a prova, treine no simulador e depois pratique no cavalete.</p>
+  <div class="row" style="margin-bottom:14px"><span class="pill" id="lidos">0 de 6 lidos</span></div>
+
+  <details class="mod" data-m="1" open><summary><span class="n">1</span>O aparelho e como ligar</summary><div class="body">
+    <p>O geofone ECO200 capta a vibração do ponto onde você encosta o sensor e leva o som ao fone e o número ao visor. Serve para achar vazamento em rede de água.</p>
+    <div class="grid g2">
+      <svg viewBox="0 0 220 330" role="img" aria-label="Desenho do ECO200 com visor, teclas e botão OK" style="max-width:230px;width:100%;justify-self:center">
+        <rect x="30" y="8" width="160" height="314" rx="30" fill="#1b2a33"/>
+        <rect x="46" y="40" width="128" height="90" rx="10" fill="#2a9ea8"/>
+        <text x="110" y="62" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="12" fill="#e8ffff">ECO200</text>
+        <text x="110" y="108" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="30" fill="#e8ffff">10</text>
+        <rect x="46" y="150" width="128" height="160" rx="14" fill="#5fa8a0"/>
+        <polygon points="110,160 128,184 92,184" fill="#e9862f"/><polygon points="110,296 128,272 92,272" fill="#e9862f"/>
+        <polygon points="62,228 88,210 88,246" fill="#e9862f"/><polygon points="158,228 132,210 132,246" fill="#e9862f"/>
+        <circle cx="110" cy="228" r="22" fill="#e9862f"/><text x="110" y="233" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="13" font-weight="700" fill="#1b2a33">OK</text>
+        <g font-family="IBM Plex Mono,monospace" font-size="12" font-weight="600" fill="#fff" text-anchor="middle">
+          <circle cx="16" cy="85" r="10" fill="#0e7c86"/><text x="16" y="89">1</text>
+          <circle cx="110" cy="24" r="10" fill="#0e7c86"/><text x="110" y="28">2</text>
+          <circle cx="205" cy="172" r="10" fill="#0e7c86"/><text x="205" y="176">3</text>
+          <circle cx="205" cy="288" r="10" fill="#0e7c86"/><text x="205" y="292">4</text>
+          <circle cx="16" cy="228" r="10" fill="#0e7c86"/><text x="16" y="232">5</text>
+        </g>
+      </svg>
+      <ol class="steps" style="padding-left:26px">
+        <li><b>Visor:</b> mostra o número da leitura.</li>
+        <li><b>Liga e desliga:</b> botão no topo.</li>
+        <li><b>▲ ▼</b> volume.</li>
+        <li><b>OK:</b> libera o som no fone.</li>
+        <li><b>◀ ▶</b> filtros e ajustes.</li>
+      </ol>
+    </div>
+    <h3>Para ligar, nesta ordem</h3>
+    <ol class="steps"><li>Conecte o <b>sensor</b> no aparelho.</li><li>Conecte o <b>fone</b> na lateral.</li><li>Aperte <b>liga</b>.</li><li>Coloque o fone e aperte <b>OK</b>.</li><li>Ajuste o volume até ficar confortável.</li></ol>
+    <p class="note"><b>Nunca use o volume no máximo.</b> Faz mal ao ouvido.</p>
+    <button data-read="1">Marcar como lido</button>
+  </div></details>
+
+  <details class="mod" data-m="2"><summary><span class="n">2</span>O que você escuta</summary><div class="body">
+    <p>Vazamento faz um <b>chiado contínuo e parelho</b>, sem parar. Outros sons passam e voltam: carro, torneira aberta, passos, mão no sensor.</p>
+    <ul class="tick"><li>Se o som <b>oscila e some</b>, não é vazamento.</li><li>Se o som <b>chia direto</b> e o número fica alto e estável, desconfie.</li><li>Escute onde há silêncio. Por isso o trabalho é feito de madrugada.</li></ul>
+    <div class="note"><b>Pressão mínima: 15 mca (1,5 kgf/cm²).</b> Abaixo disso o vazamento não faz barulho e o aparelho não acha nada. Meça a pressão antes. Sem manômetro, a conclusão é menos segura.</div>
+    <button data-read="2">Marcar como lido</button>
+  </div></details>
+
+  <details class="mod" data-m="3"><summary><span class="n">3</span>Qual filtro usar</summary><div class="body">
+    <p>O filtro corta os sons que não interessam. O app mostra qual usar, conforme o tubo. Você só ajusta no aparelho.</p>
+    <div class="tbl"><table><thead><tr><th>Tubo</th><th>Filtro</th></tr></thead><tbody>
+      <tr><td>Rede de ferro fundido ou aço</td><td class="mono">200 a 800 Hz</td></tr>
+      <tr><td>Rede de PVC ou PEAD</td><td class="mono">100 a 600 Hz</td></tr>
+      <tr><td>Ramal de PEAD</td><td class="mono">200 a 800 Hz</td></tr>
+      <tr><td>Ramal de ferro fundido</td><td class="mono">400 a 1200 Hz</td></tr></tbody></table></div>
+    <p class="note"><b>Está começando ou não sabe ajustar?</b> Use sempre o filtro fixo <b>Alto (100 a 1200 Hz)</b>.</p>
+    <button data-read="3">Marcar como lido</button>
+  </div></details>
+
+  <details class="mod" data-m="4"><summary><span class="n">4</span>Como medir e comparar</summary><div class="body">
+    <ol class="steps"><li><b>Apoie</b> o sensor no ponto, com contato firme.</li><li><b>Não mexa.</b> Mexer cria barulho falso.</li><li><b>Espere</b> o número do visor ficar parado.</li><li><b>Anote</b> o número no app.</li><li>Meça em <b>mais de uma posição</b>, uma ao lado da outra.</li></ol>
+    <h3>O número sozinho não diz nada</h3>
+    <p>Todo ponto tem um número de fundo. O que importa é a <b>comparação</b>. Por isso, em cada rua, comece medindo um <b>ponto de referência</b>: um registro ou cavalete sem suspeita. O app compara os outros pontos com ele.</p>
+    <div class="grid" style="gap:8px">
+      <div class="res ok"><span class="t">Verde: sem indício</span><span class="s">Perto da referência.</span></div>
+      <div class="res warn"><span class="t">Amarelo: suspeito</span><span class="s">Uma posição bem acima da referência. Meça mais uma ao lado.</span></div>
+      <div class="res bad"><span class="t">Vermelho: vazamento provável</span><span class="s">Duas posições acima. Avise a equipe de reparo.</span></div></div>
+    <button data-read="4">Marcar como lido</button>
+  </div></details>
+
+  <details class="mod" data-m="5"><summary><span class="n">5</span>Treino no cavalete</summary><div class="body">
+    <p>No cavalete (ETA ou rua) você vê a diferença entre <b>sem vazamento</b> e <b>com vazamento</b>. A torneira aberta imita o vazamento.</p>
+    <svg viewBox="0 0 360 150" role="img" aria-label="Cavalete com sensor no registro. Torneira fechada dá número baixo, aberta dá número alto." style="width:100%;max-width:520px">
+      <rect x="10" y="60" width="150" height="14" rx="5" fill="#5b7686"/><rect x="190" y="60" width="130" height="14" rx="5" fill="#5b7686"/>
+      <rect x="150" y="48" width="50" height="38" rx="8" fill="#0e7c86"/><text x="175" y="72" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="12" font-weight="700" fill="#fff">registro</text>
+      <rect x="320" y="52" width="16" height="30" rx="4" fill="#5b7686"/><path d="M336 82 v22" stroke="#5b7686" stroke-width="10"/>
+      <path d="M338 108 q2 14 -2 22" stroke="#2a9ea8" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path d="M175 48 v-26" stroke="#f2b705" stroke-width="8" stroke-linecap="round"/><circle cx="175" cy="16" r="9" fill="#f2b705"/>
+      <text x="175" y="146" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="13" fill="currentColor">sensor no registro</text>
+      <text x="330" y="146" text-anchor="end" font-family="DM Sans,sans-serif" font-size="13" fill="currentColor">torneira</text>
+    </svg>
+    <ol class="steps"><li>Apoie o sensor no <b>registro</b>.</li><li>Com a <b>torneira fechada</b>, espere estabilizar e anote o número.</li><li>Com a <b>torneira aberta</b>, mesmo ponto e mesmo filtro, anote de novo.</li><li>O número aberto deve ser <b>bem maior</b>. Escute a diferença no fone.</li><li>Repita 3 vezes. A aba <b>Cavalete</b> usa esses números para ajustar o limiar do app.</li></ol>
+    <p class="note"><b>Na rua é igual:</b> o registro de uma ligação sem vazamento serve de referência e o ponto suspeito é comparado com ele.</p>
+    <button data-read="5">Marcar como lido</button>
+  </div></details>
+
+  <details class="mod" data-m="6"><summary><span class="n">6</span>Cuidados</summary><div class="body">
+    <ul class="tick"><li><b>Trânsito:</b> com o fone você não ouve bem a rua. Fique atento.</li><li><b>Volume</b> nunca no máximo.</li><li>A ponta do sensor machuca. Cuidado ao carregar.</li><li>Não deixe cair e nunca abra o aparelho.</li><li><b>Bateria:</b> carregue desligado, até 2 horas.</li><li>Se o aparelho travar, desligue e ligue de novo.</li></ul>
+    <button data-read="6">Marcar como lido</button>
+  </div></details>
+</section>
+
+<!-- 2 PROVA -->
+<section class="view" id="v-prova" hidden>
+  <h2>Prova</h2>
+  <p class="muted" style="margin-bottom:14px">10 perguntas práticas, sorteadas. Para passar: 8 acertos.</p>
+  <div class="card" id="quiz"></div>
+</section>
+
+<!-- 3 SIMULADOR -->
+<section class="view" id="v-simulador" hidden>
+  <h2>Simulador de escuta</h2>
+  <p class="muted" style="margin-bottom:14px">Treino com sons de exemplo. Veja o tubo e a pressão, escolha o filtro, apoie o sensor nos seis pontos e compare. Depois diga onde está o vazamento.</p>
+  <div class="grid g2">
+    <div class="card" style="display:grid;gap:12px">
+      <div class="row" style="justify-content:space-between"><h3 id="s-tit">Cenário 1</h3><span class="pill" id="s-placar">0 de 0</span></div>
+      <p id="s-desc"></p>
+      <div class="lcd" aria-live="polite">
+        <div class="t"><span>ECO200</span><span id="s-ponto">sensor fora</span></div>
+        <svg viewBox="0 0 200 118" style="width:100%;max-width:340px;display:block;margin:2px auto 0" role="img" aria-label="Medidor de nível de ruído">
+          <path d="M20 108 A80 80 0 0 1 180 108" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="14" stroke-linecap="round"/>
+          <path id="arc" d="M20 108 A80 80 0 0 1 180 108" fill="none" stroke="#f7fffe" stroke-width="14" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="251.3"/>
+          <text id="arcv" x="100" y="96" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="40" font-weight="600" fill="#f4ffff">--</text>
+        </svg>
+        <div class="t"><span id="s-filt">Filtro 100 a 1200 Hz</span><span>vol <span id="s-vol">3</span></span></div>
+      </div>
+      <div class="row"><button class="pri" id="s-som" aria-pressed="false">Ativar som</button><label style="margin:0;flex:1;min-width:150px">Volume <input type="range" id="vol" min="0" max="10" value="3" style="padding:0"></label></div>
+    </div>
+    <div class="card" style="display:grid;gap:14px;align-content:start">
+      <div><label for="f-lo">Filtro (Hz)</label>
+        <div class="row" style="flex-wrap:nowrap"><select id="f-lo"><option>100</option><option>200</option><option>400</option></select><span>a</span><select id="f-hi"><option>600</option><option>800</option><option selected>1200</option></select></div>
+        <div class="row" style="margin-top:8px"><button data-p="100,600">Baixo</button><button data-p="100,800">Médio</button><button data-p="100,1200">Alto</button></div></div>
+      <div><p style="font-weight:600;margin-bottom:6px">Apoie o sensor no ponto</p><div class="pts" id="pts"></div><p class="muted status" style="margin-top:6px">Seis pontos, de A a F. Meça em mais de um e compare.</p></div>
+      <div><p style="font-weight:600;margin-bottom:6px">Sua conclusão</p><div class="row" id="concl"></div></div>
+      <div id="s-fb" aria-live="polite"></div>
+      <div class="row"><button id="s-next" hidden class="pri">Próximo cenário</button><button id="s-save" hidden>Salvar meu resultado</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 CAVALETE -->
+<section class="view" id="v-cavalete" hidden>
+  <h2>Cavalete</h2>
+  <p class="muted" style="margin-bottom:14px">Prática no cavalete da ETA, ou no registro de uma ligação na rua. Aqui se acerta o limiar do app e se libera o técnico para o campo.</p>
+  <div class="grid g2">
+    <div class="card" style="display:grid;gap:12px;align-content:start">
+      <h3>1. Acertar o limiar</h3>
+      <p class="muted status">Mesmo ponto, mesmo filtro, mesma pressão. Anote o número do visor com a torneira fechada e com ela aberta. Faça 3 vezes.</p>
+      <div id="cal-rows" style="display:grid;gap:8px"></div>
+      <div id="cal-out"></div>
+      <div class="row"><button class="pri" id="cal-ok" disabled>Usar este limiar</button><span class="status muted" id="cal-msg"></span></div>
+      <p class="status muted" id="lim-atual"></p>
+    </div>
+    <div class="card" style="display:grid;gap:10px;align-content:start">
+      <h3>2. Ficha de liberação</h3>
+      <div class="grid g2"><div><label for="p-aluno">Técnico</label><input id="p-aluno"></div><div><label for="p-inst">Quem acompanhou (opcional)</label><input id="p-inst"></div></div>
+      <div id="p-itens"></div>
+      <div><label for="p-res">Resultado</label><select id="p-res"><option>Liberado</option><option>Repetir treinamento</option></select></div>
+      <div><label for="p-obs">Observações</label><textarea id="p-obs" rows="2"></textarea></div>
+      <div class="row"><button class="pri" id="p-save">Registrar</button><span class="status muted" id="p-msg"></span></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3 style="margin-bottom:4px">Quadro de liberação</h3>
+    <p class="muted status" style="margin-bottom:8px">Pronto para campo: prova com 80% ou mais e a última prática como Liberado.</p>
+    <div class="tbl"><table><thead><tr><th>Nome</th><th>Prova</th><th>Simulador</th><th>Prática</th><th>Situação</th></tr></thead><tbody id="quadro"></tbody></table></div>
+    <p class="muted status" id="quadro-vazio" style="margin-top:8px">Ninguém avaliado ainda.</p>
+  </div>
+</section>
+
+<!-- 5 CAMPO -->
+<section class="view" id="v-campo" hidden>
+  <h2>Campo</h2>
+  <p class="muted status" id="c-lim" style="margin-bottom:12px"></p>
+  <div class="card" style="margin-bottom:14px"><div class="row" style="justify-content:space-between"><h3>Turno</h3><span class="pill" id="t-st">Não iniciado</span></div>
+    <p class="muted status" id="t-tx" style="margin-top:4px"></p>
+    <div class="row" style="margin-top:10px"><button class="pri" id="t-ini">Iniciar turno</button><button id="t-fim">Encerrar turno</button></div>
+    <div class="row" style="margin-top:8px"><button class="pri" id="t-prep">Preparar relatório para enviar</button></div>
+    <div id="t-out" hidden style="display:grid;gap:8px;margin-top:10px"><textarea id="t-msg" rows="6" readonly></textarea><div class="row" id="t-btns"></div><p class="muted status" id="t-hint"></p></div>
+    <p class="muted status" style="margin-top:8px">Pode enviar o relatório a qualquer momento, parcial ou no fim. Se não conseguir enviar, os dados ficam salvos no aparelho.</p></div>
+  <div class="card"><h3 style="margin-bottom:8px">Antes de sair</h3>
+    <div id="pre"></div><button id="pre-reset" style="margin-top:4px">Limpar</button></div>
+  <details class="card" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;font-family:var(--f-head);font-size:19px">Receber pacote do gestor</summary>
+    <div style="margin-top:12px;display:grid;gap:10px"><div><label for="c-pkg">Cole aqui a mensagem do gestor</label><textarea id="c-pkg" rows="4"></textarea></div>
+    <div class="row"><button class="pri" id="c-pkg-ok">Importar pacote</button><span class="status muted" id="c-pkg-msg"></span></div></div></details>
+  <div class="card" id="c-main" style="margin-top:14px"></div>
+  <details class="card" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;font-family:var(--f-head);font-size:19px">Lista da noite (opcional)</summary>
+    <div style="margin-top:12px;display:grid;gap:10px">
+      <div class="row" style="justify-content:space-between"><span class="muted status">Ruas ou endereços para o técnico seguir.</span><span class="pill" id="c-prog">0 de 0</span></div>
+      <div id="c-stops"></div>
+      <div><label for="c-txt">Uma rua ou endereço por linha</label><textarea id="c-txt" rows="5" placeholder="Rua, trecho ou referência"></textarea></div>
+      <div class="row"><button class="pri" id="c-salvar">Salvar lista</button><span class="status muted" id="c-msg"></span></div>
+    </div></details>
+  <div class="card" style="margin-top:14px"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h3>Últimas leituras</h3><button id="csv" hidden>Exportar CSV</button></div><div id="lista"><p class="muted">Nenhuma leitura registrada.</p></div></div>
+</section>
+
+<!-- AJUDA -->
+<section class="view" id="v-ajuda" hidden>
+  <h2>Ajuda</h2>
+  <p class="muted" style="margin-bottom:14px">Dúvida no meio do trabalho? Veja aqui.</p>
+  <div class="card" style="display:grid;gap:12px">
+    <h3>Passo a passo</h3>
+    <ol class="steps"><li>Em <b>Campo</b>, toque em <b>Iniciar turno</b>.</li><li>Digite a rua e responda: tubo, pressão e filtro.</li><li>Ajuste o filtro no geofone. Sem experiência, use o <b>Alto fixo</b>.</li><li>Meça o <b>ponto de referência</b> (um registro sem suspeita) e digite o número do visor.</li><li>Em cada ponto: digite onde está (ex.: em frente ao nº 150), apoie o sensor, <b>não mexa</b>, espere o número parar e digite. Meça em mais de uma posição.</li><li>Veja a cor: <b>verde</b> sem indício, <b>amarelo</b> suspeito, <b>vermelho</b> vazamento provável.</li><li>Toque em <b>Terminar rua</b> e envie o resumo por WhatsApp. Você pode enviar a qualquer hora.</li><li>No fim, toque em <b>Encerrar turno</b>.</li></ol>
+  </div>
+  <div class="card" style="margin-top:14px;display:grid;gap:10px">
+    <h3>Problemas comuns</h3>
+    <p><b>O número não para de mudar:</b> espere. Se continuar, confira se o sensor está firme e sem mexer.</p>
+    <p><b>Pressão abaixo de 15 mca:</b> o geofone não detecta. Registre e passe para outra rua.</p>
+    <p><b>Não tenho ponto de referência:</b> use um registro de ligação sem suspeita, na mesma rua.</p>
+    <p><b>O aparelho travou:</b> desligue e ligue de novo.</p>
+    <p><b>Não consegui enviar:</b> sem problema. Os dados ficam salvos. Envie quando tiver sinal.</p>
+  </div>
+  <div class="card" style="margin-top:14px"><h3 style="margin-bottom:10px">Rever o treinamento</h3>
+    <div class="row"><a class="btn" href="#treinar">Módulos</a><a class="btn" href="#simulador">Simulador</a><a class="btn" href="#cavalete">Cavalete</a></div></div>
+</section>
+
+<p class="muted status" style="margin-top:22px" id="dbs">Verificando armazenamento…</p>
+</div>
+
+<script>
+let ac=null,nb=null,fontes=[],master=null;
+let TURNO=null;
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const rnd=n=>Math.floor(Math.random()*n);
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
+const fmtData=ts=>new Date(ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function btn(t,fn,c){const b=el('button',c,t);b.onclick=fn;return b}
+function waBtn(label,fn,cls){const a=el('a','btn '+(cls||''),label);a.target='_blank';a.rel='noopener';const u=()=>'https://wa.me/?text='+encodeURIComponent(fn());a.href=u();a.onclick=()=>{a.href=u()};return a}
+const hh=ts=>new Date(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+const dur=ms=>{const m=Math.round(ms/60000);return Math.floor(m/60)+'h'+String(m%60).padStart(2,'0')};
+function nome(){return $('#nome').value.trim()}
+TURNO=store.get('turno',{id:null,ini:null,fim:null});
+$('#nome').value=store.get('nome','');
+$('#nome').addEventListener('input',()=>{store.set('nome',nome());if(!$('#p-aluno').dataset.touched)$('#p-aluno').value=nome()});
+
+/* ---------- rotas por hash ---------- */
+const VIEWS=['inicio','treinar','prova','simulador','cavalete','campo','ajuda','gestor'];
+const TABS={tr:[['treinar','1 Treinar'],['prova','2 Prova'],['simulador','3 Simulador'],['cavalete','4 Cavalete']],tb:[['campo','Campo'],['ajuda','Ajuda']],ge:[],in:[]};
+function route(){const id=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):'inicio';
+  VIEWS.forEach(v=>{$('#v-'+v).hidden=v!==id});
+  const modo=id==='inicio'?'in':(id==='campo'||id==='ajuda')?'tb':id==='gestor'?'ge':'tr';
+  $('#m-tr').setAttribute('aria-current',modo==='tr');$('#m-tb').setAttribute('aria-current',modo==='tb');$('#m-ge').setAttribute('aria-current',modo==='ge');
+  const nav=$('#tabs');nav.textContent='';nav.hidden=!TABS[modo].length;TABS[modo].forEach(([h,t])=>{const a=el('a',null,t);a.href='#'+h;a.setAttribute('aria-current',h===id?'page':'false');nav.appendChild(a)});
+  if(id!=='simulador')pararSom(); window.scrollTo(0,0)}
+addEventListener('hashchange',route);route();
+
+/* ---------- armazenamento: db compartilhado ou só local ---------- */
+let DB=null, DL=[], AV=[];
+const loc={l:store.get('leituras_local',[]),a:store.get('aval_local',[])};
+function turnoAberto(){return !!(TURNO.id&&!TURNO.fim)}
+function saveT(){store.set('turno',TURNO)}
+async function iniciarTurno(auto){if(turnoAberto())return;TURNO={id:Date.now(),ini:Date.now(),fim:null,auto:!!auto};saveT();await salvar('leituras',{tipo:'turno',evento:'inicio_turno'});pTurno()}
+async function encerrarTurno(){if(!turnoAberto())return;TURNO.fim=Date.now();saveT();await salvar('leituras',{tipo:'turno',evento:'fim_turno',turno:TURNO.id});pTurno()}
+async function salvar(col,obj){if(col==='leituras'&&obj.tipo!=='turno'&&!turnoAberto())await iniciarTurno(true);
+  obj.ts=Date.now();obj.nome=obj.nome||nome()||'Sem nome';if(col==='leituras'&&TURNO.id&&obj.turno==null)obj.turno=TURNO.id;
+  if(DB){try{await DB.collection(col).add(obj);return 'compartilhado'}catch(e){}}
+  const k=col==='leituras'?'l':'a';loc[k].unshift(obj);store.set(col==='leituras'?'leituras_local':'aval_local',loc[k]);
+  if(k==='l')renderLeituras();else renderQuadro();return 'local'}
+function dadosL(){return DB?DL:loc.l} function dadosA(){return DB?AV:loc.a}
+function statusDb(){$('#dbs').textContent=DB?'Registros compartilhados com a equipe.':'Registros salvos só neste aparelho.'}
+statusDb();
+(window.claude&&claude.use?claude.use('db'):Promise.resolve(null)).then(d=>{DB=d;statusDb();if(!d)return;
+  iniciaLista(d);iniciaLim(d);
+  d.collection('leituras').orderBy('ts','desc').limit(400).onSnapshot(s=>{DL=s.docs.map(x=>x.data());renderLeituras()},()=>{});
+  d.collection('avaliacoes').orderBy('ts','desc').limit(300).onSnapshot(s=>{AV=s.docs.map(x=>x.data());renderQuadro()},()=>{});
+}).catch(()=>{});
+
+/* ---------- 1 treinar ---------- */
+const lidos=new Set(store.get('lidos',[]));
+function atualizaLidos(){$('#lidos').textContent=lidos.size+' de 6 lidos';$('#lidos').className='pill'+(lidos.size===6?' ok':'');
+  $$('[data-read]').forEach(b=>{b.textContent=lidos.has(b.dataset.read)?'Lido ✓':'Marcar como lido'})}
+$$('[data-read]').forEach(b=>b.onclick=()=>{const m=b.dataset.read;lidos.has(m)?lidos.delete(m):lidos.add(m);store.set('lidos',[...lidos]);atualizaLidos();
+  const d=b.closest('details');if(lidos.has(m)){d.open=false;const nx=$('details[data-m="'+(+m+1)+'"]');if(nx)nx.open=true}});
+atualizaLidos();
+
+/* ---------- 2 prova ---------- */
+const BANCO=[
+["Qual a pressão mínima na rede para o geofone achar vazamento?",["5 mca","15 mca","30 mca","50 mca"],1,"Com menos de 15 mca (1,5 kgf/cm²) o vazamento não faz barulho."],
+["Qual a ordem certa para ligar?",["Ligar, depois o fone e o sensor","Sensor, fone, depois ligar","Fone, ligar, depois o sensor","Tanto faz"],1,"Primeiro o sensor, depois o fone, por último o botão de ligar."],
+["Qual filtro usar se você está começando?",["Baixo (100 a 600 Hz)","Médio (100 a 800 Hz)","Alto (100 a 1200 Hz)","Nenhum"],2,"Quem está começando usa o filtro fixo Alto."],
+["O que acontece se você mexe o sensor durante a medição?",["Nada","Aparece barulho falso","O som melhora","O aparelho desliga"],1,"Mexer cria barulho falso. Apoie e espere."],
+["Quantas posições medir num ponto suspeito?",["Uma","Duas, no mesmo lugar","Várias, uma ao lado da outra","Nenhuma, o número basta"],2,"Nunca confie numa medição só. Meça em mais de uma posição."],
+["Como é o som de um vazamento?",["Chiado contínuo e parelho","Estalos que somem","Silêncio","Música"],0,"Vazamento chia direto. Som que oscila e some costuma ser carro, torneira ou passos."],
+["Qual o primeiro ponto a medir numa rua?",["O ponto mais suspeito","Um ponto de referência, sem suspeita","O último da rua","Qualquer um, sem anotar"],1,"A referência dá a base de comparação para os outros pontos."],
+["Um ponto deu número bem acima da referência, em uma posição. O que fazer?",["Dar como vazamento","Ignorar","Medir mais uma posição ao lado","Ir embora"],2,"Uma posição alta é só suspeita. Meça outra ao lado para confirmar."],
+["Como deve ficar o volume?",["No máximo","Confortável, nunca no máximo","No mínimo","Não ajusta"],1,"Volume máximo faz mal ao ouvido."],
+["Por que ter cuidado com o trânsito?",["Com o fone você ouve mal a rua","O carro estraga o sensor","O carro muda o filtro","Não precisa"],0,"O fone isola você do ambiente. Fique atento."],
+["O aparelho travou. O que fazer?",["Abrir","Desligar e ligar de novo","Trocar o sensor","Jogar fora"],1,"Desligue e ligue de novo."],
+["No cavalete, o que você espera ver com a torneira aberta?",["Número menor que fechada","Número igual","Número bem maior que fechada","O aparelho desliga"],2,"A torneira aberta imita o vazamento: o número sobe."],
+["A pressão no manômetro é 10 mca. O que fazer?",["Escutar normalmente","Avisar que não dá para concluir e seguir","Aumentar o volume","Trocar o filtro"],1,"Abaixo de 15 mca o aparelho não detecta. Registre pressão baixa."],
+["Como carregar a bateria?",["Ligado, durante o serviço","Desligado, até 2 horas","Por 24 horas","Não carrega"],1,"Carregue desligado, até 2 horas."],
+["O número do visor fica mudando a cada segundo. O que fazer?",["Anotar o primeiro","Esperar estabilizar","Mexer o sensor","Trocar de ponto na hora"],1,"Espere o número ficar parado antes de anotar."]];
+let Q=null;
+function novaProva(){Q={itens:shuffle(BANCO).slice(0,10).map(x=>{const idx=shuffle([0,1,2,3]);return{q:x[0],o:idx.map(i=>x[1][i]),a:idx.indexOf(x[2]),e:x[3]}}),i:0,ok:0,resp:null};rQuiz()}
+function rQuiz(){const box=$('#quiz');box.textContent='';
+  if(!Q){const p=document.createElement('div');p.innerHTML='<p style="margin-bottom:12px">São 10 perguntas. Você precisa de 8 acertos. Sem limite de tempo.</p>';const b=document.createElement('button');b.className='pri';b.textContent='Começar a prova';b.onclick=novaProva;p.appendChild(b);box.appendChild(p);return}
+  if(Q.i>=10){const pct=Q.ok*10;const ap=pct>=80;box.innerHTML='<h3></h3><p class="big" style="margin:10px 0"></p><p id="q-r" style="margin-bottom:12px"></p><div class="row"><button class="pri" id="q-s">Salvar resultado</button><button id="q-n">Refazer</button><span class="status muted" id="q-m"></span></div>';
+    $('h3',box).textContent=ap?'Aprovado':'Ainda não';$('.big',box).textContent=Q.ok+' / 10';$('#q-r').textContent=ap?'Muito bem. Siga para o simulador.':'Releia os módulos e refaça. As perguntas mudam a cada prova.';
+    $('.row',box).appendChild(waBtn('Enviar por WhatsApp',()=>'Prova geofone ECO200\n'+(nome()||'Sem nome')+'\n'+(Q?Q.ok:0)+' de 10 - '+(Q&&Q.ok>=8?'Aprovado':'Não aprovado')+'\n'+fmtData(Date.now())));$('#q-n').onclick=()=>{Q=null;rQuiz()};$('#q-s').onclick=async()=>{$('#q-s').disabled=true;const w=await salvar('avaliacoes',{tipo:'prova',pontos:Q.ok,total:10});$('#q-m').textContent=w==='local'?'Salvo neste aparelho.':'Salvo.'};return}
+  const it=Q.itens[Q.i];
+  const h=document.createElement('div');h.innerHTML='<div class="row" style="justify-content:space-between"><span class="status muted mono"></span><span class="status mono"></span></div><div class="bar" style="margin:8px 0 14px"><i></i></div><h3></h3>';
+  $('.muted',h).textContent='Pergunta '+(Q.i+1)+' de 10';$('.mono:not(.muted)',h).textContent=Q.ok+' acertos';$('.bar i',h).style.width=(Q.i*10)+'%';$('h3',h).textContent=it.q;box.appendChild(h);
+  it.o.forEach((t,i)=>{const b=document.createElement('button');b.className='opt';b.textContent=t;b.onclick=()=>{if(Q.resp!==null)return;Q.resp=i;if(i===it.a)Q.ok++;rQuiz()};
+    if(Q.resp!==null){b.disabled=true;if(i===it.a){b.classList.add('right');b.textContent='✓ '+t}else if(i===Q.resp){b.classList.add('wrong');b.textContent='✗ '+t}}box.appendChild(b)});
+  if(Q.resp!==null){const f=document.createElement('p');f.className='note';f.style.marginTop='12px';f.textContent=(Q.resp===it.a?'Correto. ':'Não foi essa. ')+it.e;box.appendChild(f);
+    const n=document.createElement('button');n.className='pri';n.style.marginTop='12px';n.textContent=Q.i===9?'Ver resultado':'Próxima';n.onclick=()=>{Q.i++;Q.resp=null;rQuiz()};box.appendChild(n)}}
+rQuiz();
+
+/* ---------- 3 simulador ---------- */
+const BANDS={fofo_rede:{n:'Rede de ferro fundido ou aço',b:[200,800]},pvc_rede:{n:'Rede de PVC',b:[100,600]},pead_rede:{n:'Rede de PEAD',b:[100,600]},pead_ramal:{n:'Ramal de PEAD',b:[200,800]},fofo_ramal:{n:'Ramal de ferro fundido',b:[400,1200]}};
+const AMB=[60,400], PT='ABCDEF';
+const ov=(a,b)=>Math.max(0,Math.min(a[1],b[1])-Math.max(a[0],b[0]))/(a[1]-a[0]);
+let sc=null, ses={ok:0,n:0}, soundOn=false, vol=3;
+function novoCenario(){pararSom();const ks=Object.keys(BANDS);const k=ks[rnd(ks.length)];
+  const baixa=Math.random()<.18;const p=baixa?8+rnd(6):20+rnd(36);const leak=Math.random()<.8?rnd(6):-1;
+  sc={k,p,leak,amb:Array.from({length:6},()=>6+rnd(9)),sel:-1,done:false,num:ses.n+1};
+  $('#s-fb').textContent='';$('#s-next').hidden=true;rSim()}
+function filtro(){return[+$('#f-lo').value,+$('#f-hi').value]}
+function nivel(i){const F=filtro();let v=sc.amb[i]*(.35+.65*ov(F,AMB));
+  if(i===sc.leak){const S=Math.max(0,Math.min(80,(sc.p-12)*2.2));v+=S*ov(F,BANDS[sc.k].b)}return v}
+function respostaCerta(){return sc.p<15?'baixa':sc.leak<0?'nada':String(sc.leak)}
+function rSim(){$('#s-tit').textContent='Cenário '+sc.num;
+  const d=$('#s-desc');d.textContent='';d.append('Tubo: ',Object.assign(document.createElement('b'),{textContent:BANDS[sc.k].n}),'. Manômetro: ',Object.assign(document.createElement('b'),{textContent:sc.p+' mca'}),'.');
+  $('#s-placar').textContent=ses.ok+' de '+ses.n;
+  const pts=$('#pts');pts.textContent='';[...PT].forEach((c,i)=>{const b=document.createElement('button');b.textContent=c;b.setAttribute('aria-pressed',sc.sel===i);b.onclick=()=>{if(sc.done)return;sc.sel=i;rSim();ouvir()};pts.appendChild(b)});
+  const cc=$('#concl');cc.textContent='';[...PT].map((c,i)=>['Vazamento em '+c,String(i)]).concat([['Sem vazamento','nada'],['Pressão baixa, não dá para concluir','baixa']]).forEach(([t,v])=>{const b=document.createElement('button');b.textContent=t;b.disabled=sc.done;b.onclick=()=>concluir(v);cc.appendChild(b)});
+  $('#s-filt').textContent='Filtro '+filtro()[0]+' a '+filtro()[1]+' Hz';atualizaGauge()}
+function atualizaGauge(){const on=sc&&sc.sel>=0;$('#s-ponto').textContent=on?'ponto '+PT[sc.sel]:'sensor fora';
+  const v=on?Math.max(0,Math.min(99,Math.round(nivel(sc.sel)+(Math.random()*4-2)))):0;
+  $('#arcv').textContent=on?v:'--';$('#arc').style.strokeDashoffset=251.3*(1-v/99)}
+function concluir(v){if(sc.done)return;sc.done=true;pararSom();ses.n++;const c=respostaCerta();const ok=v===c;if(ok)ses.ok++;
+  const Fm=BANDS[sc.k].b;
+  const txt={baixa:'Com menos de 15 mca o vazamento não faz barulho. A resposta era "pressão baixa".',nada:'Não havia vazamento nesse trecho.'}[c]||'O vazamento estava no ponto '+PT[+c]+'.';
+  const fb=$('#s-fb');fb.textContent='';const p=document.createElement('p');p.className='note';p.textContent=(ok?'Correto. ':'Não foi dessa vez. ')+txt+' Filtro indicado para esse tubo: '+Fm[0]+' a '+Fm[1]+' Hz.';fb.appendChild(p);
+  $('#s-next').hidden=false;$('#s-save').hidden=false;$('#s-wa').hidden=false;rSim()}
+$('#s-next').onclick=novoCenario;
+const swa=waBtn('Enviar resultado por WhatsApp',()=>'Simulador geofone ECO200\n'+(nome()||'Sem nome')+'\n'+ses.ok+' de '+ses.n+' cenários corretos\n'+fmtData(Date.now()));swa.id='s-wa';swa.hidden=true;$('#s-save').after(swa);
+$('#s-save').onclick=async()=>{$('#s-save').disabled=true;const w=await salvar('avaliacoes',{tipo:'simulador',pontos:ses.ok,total:ses.n});$('#s-save').textContent=w==='local'?'Salvo neste aparelho':'Salvo'};
+['f-lo','f-hi'].forEach(i=>$('#'+i).onchange=()=>{rSim();ouvir()});
+$$('[data-p]').forEach(b=>b.onclick=()=>{const[a,c]=b.dataset.p.split(',');$('#f-lo').value=a;$('#f-hi').value=c;rSim();ouvir()});
+$('#vol').oninput=e=>{vol=+e.target.value;$('#s-vol').textContent=vol;if(master)master.gain.value=vol/10*.5};
+setInterval(()=>{if(sc&&sc.sel>=0&&!$('#v-simulador').hidden)atualizaGauge()},600);
+function pararSom(){fontes.forEach(s=>{try{s.stop()}catch(e){}});fontes=[];if(master){try{master.disconnect()}catch(e){}master=null}}
+function ouvir(){pararSom();if(!soundOn||!sc||sc.sel<0)return;
+  const F=filtro(),i=sc.sel;const hp=ac.createBiquadFilter();hp.type='highpass';hp.frequency.value=F[0];const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=F[1];
+  master=ac.createGain();master.gain.value=vol/10*.5;hp.connect(lp);lp.connect(master);master.connect(ac.destination);
+  const mk=(band,g)=>{const s=ac.createBufferSource();s.buffer=nb;s.loop=true;const bp=ac.createBiquadFilter();bp.type='bandpass';const f0=Math.sqrt(band[0]*band[1]);bp.frequency.value=f0;bp.Q.value=Math.max(.5,f0/(band[1]-band[0]));const gg=ac.createGain();gg.gain.value=g;s.connect(bp);bp.connect(gg);gg.connect(hp);s.start();fontes.push(s)};
+  mk(AMB,sc.amb[i]/100*3);if(i===sc.leak)mk(BANDS[sc.k].b,Math.max(0,Math.min(80,(sc.p-12)*2.2))/100*3)}
+$('#s-som').onclick=()=>{soundOn=!soundOn;$('#s-som').setAttribute('aria-pressed',soundOn);$('#s-som').textContent=soundOn?'Som ligado':'Ativar som';
+  if(soundOn){if(!ac){const C=window.AudioContext||window.webkitAudioContext;if(!C){soundOn=false;$('#s-som').textContent='Sem suporte a som';return}ac=new C();nb=ac.createBuffer(1,ac.sampleRate*2,ac.sampleRate);const d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}ac.resume();ouvir()}else pararSom()};
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pararSom()});
+novoCenario();
+
+/* ---------- limiar (compartilhado) ---------- */
+/* Valor inicial provisório até a calibração no cavalete. */
+let LIM=store.get('lim',{fator:1.5,prov:true});
+let F=store.get('F',null);
+function textoLim(){return 'Limiar: ponto suspeito a partir de '+String(LIM.fator).replace('.',',')+'× a referência'+(LIM.prov?' (provisório, acerte no cavalete)':' (acertado no cavalete)')}
+function iniciaLim(d){d.doc('config/limiar').onSnapshot(sn=>{if(sn.exists){const v=sn.data();if(typeof v.fator==='number'){LIM={fator:v.fator,prov:!!v.prov};store.set('lim',LIM)}}pLim()},()=>{})}
+function pLim(){$('#lim-atual').textContent=textoLim();$('#c-lim').textContent=textoLim();rC()}
+
+/* ---------- 4 cavalete ---------- */
+const calIn=[];
+for(let i=0;i<3;i++){const r=el('div','grid g2');r.style.gap='8px';
+  const a=el('div'),b=el('div');const la=el('label',null,'Medida '+(i+1)+': torneira fechada'),lb=el('label',null,'Medida '+(i+1)+': torneira aberta');
+  const ia=el('input'),ib=el('input');[ia,ib].forEach(x=>{x.type='number';x.min=0;x.max=99;x.inputMode='numeric';x.oninput=calc});
+  a.append(la,ia);b.append(lb,ib);r.append(a,b);$('#cal-rows').appendChild(r);calIn.push([ia,ib])}
+let calFator=null;
+function calc(){const rs=calIn.filter(([a,b])=>a.value!==''&&b.value!=='').map(([a,b])=>+b.value/Math.max(+a.value,1));
+  const out=$('#cal-out');out.textContent='';calFator=null;$('#cal-ok').disabled=true;
+  if(rs.length<2){out.appendChild(el('p','muted status','Preencha ao menos 2 pares.'));return}
+  const s=rs.slice().sort((x,y)=>x-y);const med=s[Math.floor(s.length/2)];
+  if(med<1.5){out.appendChild(el('p','note','A diferença entre aberta e fechada ficou pequena. Confira o filtro, a pressão e o contato do sensor, e repita.'));return}
+  calFator=Math.max(1.3,Math.round((1+med)/2*10)/10);
+  const r=el('div','res ok');r.append(el('span','t','Limiar sugerido: '+String(calFator).replace('.',',')+'×'),el('span','s','Aberta ficou cerca de '+med.toFixed(1).replace('.',',')+'× a fechada. O limiar fica no meio do caminho.'));out.appendChild(r);$('#cal-ok').disabled=false}
+$('#cal-ok').onclick=async()=>{if(calFator==null)return;LIM={fator:calFator,prov:false};store.set('lim',LIM);let w='local';
+  if(DB){try{await DB.doc('config/limiar').set({fator:LIM.fator,prov:false,ts:Date.now()});w='equipe'}catch(e){}}
+  $('#cal-msg').textContent=w==='local'?'Salvo neste aparelho.':'Salvo para a equipe.';pLim()};
+const ITENS=['Liga o aparelho na ordem certa','Escolhe o filtro certo para o tubo','Mede o ponto de referência primeiro','Mede o cavalete com a torneira fechada e aberta e vê a diferença','Não mexe o sensor e espera o número parar','Mede em mais de uma posição','Registra a rua e o ponto no app'];
+ITENS.forEach((t,i)=>{const l=el('label','chk');const c=el('input');c.type='checkbox';c.id='pi'+i;l.append(c,t);$('#p-itens').appendChild(l)});
+$('#p-aluno').addEventListener('input',e=>e.target.dataset.touched=1);$('#p-aluno').value=nome();
+$('#p-save').onclick=async()=>{const a=$('#p-aluno').value.trim();if(!a){$('#p-msg').textContent='Informe o nome do técnico.';return}
+  const marc=ITENS.filter((t,i)=>$('#pi'+i).checked);const w=await salvar('avaliacoes',{tipo:'pratica',nome:a,instrutor:$('#p-inst').value.trim(),resultado:$('#p-res').value,itens:marc.length,obs:$('#p-obs').value.trim()});
+  $('#p-msg').textContent=w==='local'?'Registrado neste aparelho.':'Registrado.';ITENS.forEach((t,i)=>$('#pi'+i).checked=false);$('#p-obs').value=''};
+$('#p-save').after(waBtn('Enviar por WhatsApp',()=>{const n=ITENS.filter((t,i)=>$('#pi'+i).checked).length;return 'Ficha de liberação geofone ECO200\nTécnico: '+($('#p-aluno').value.trim()||'Sem nome')+'\nResultado: '+$('#p-res').value+'\nItens ok: '+n+' de '+ITENS.length+($('#p-inst').value.trim()?'\nAcompanhou: '+$('#p-inst').value.trim():'')+'\n'+fmtData(Date.now())}));
+function renderQuadro(){const m={};[...dadosA()].sort((x,y)=>x.ts-y.ts).forEach(r=>{const k=(r.nome||'').toLowerCase();const o=m[k]||(m[k]={nome:r.nome,prova:null,sim:null,pr:null});
+    if(r.tipo==='prova')o.prova=Math.max(o.prova??0,Math.round(r.pontos/r.total*100));
+    if(r.tipo==='simulador'&&r.total)o.sim=Math.max(o.sim??0,Math.round(r.pontos/r.total*100));
+    if(r.tipo==='pratica')o.pr=r.resultado});
+  const tb=$('#quadro');tb.textContent='';const ks=Object.keys(m);$('#quadro-vazio').hidden=ks.length>0;
+  ks.forEach(k=>{const o=m[k];const tr=document.createElement('tr');const pronto=o.prova!=null&&o.prova>=80&&o.pr==='Liberado';
+    [o.nome,o.prova==null?'—':o.prova+'%',o.sim==null?'—':o.sim+'%',o.pr||'—'].forEach(t=>{const td=document.createElement('td');td.textContent=t;tr.appendChild(td)});
+    const td=document.createElement('td');const s=document.createElement('span');s.className='pill '+(pronto?'ok':'warn');s.textContent=pronto?'Pronto para campo':'Em treinamento';td.appendChild(s);tr.appendChild(td);tb.appendChild(tr)})}
+renderQuadro();
+
+/* ---------- 5 campo ---------- */
+const PRE=['Bateria carregada','Sensor e fone conectados, aparelho ligado, volume baixo','Escuta de teste: som baixo e estável','Manômetro, caneta e este app no celular','Local seguro: atenção ao trânsito'];
+const pre=store.get('pre',{});PRE.forEach((t,i)=>{const l=el('label','chk');const c=el('input');c.type='checkbox';c.checked=!!pre[i];c.onchange=()=>{pre[i]=c.checked;store.set('pre',pre)};l.append(c,t);$('#pre').appendChild(l)});
+$('#pre-reset').onclick=()=>{$$('#pre input').forEach(c=>c.checked=false);store.set('pre',{})};
+
+const MINP=6;
+const TUBOS=[['Rede de ferro fundido ou aço',200,800],['Rede de PVC ou PEAD',100,600],['Ramal de PEAD',200,800],['Ramal de ferro fundido',400,1200],['Não sei',100,1200]];
+let LISTA=store.get('lista',{ts:0,itens:[]});
+function saveF(){store.set('F',F)}
+const corRes=r=>String(r).startsWith('Vazamento')?'bad':r==='Suspeito'?'warn':r==='Sem indício'?'ok':'';
+function limiarAbs(){return Math.max(F&&F.ref||0,1)*LIM.fator}
+function statusLei(lei){const L=limiarAbs();const n=lei.filter(v=>v>=L).length;return n===0?'Sem indício':n===1?'Suspeito':'Vazamento provável'}
+
+/* lista opcional */
+function iniciaLista(d){d.doc('listas/noite').onSnapshot(sn=>{if(sn.exists){const v=sn.data();LISTA={ts:v.ts,itens:(v.itens||[]).map(x=>({id:x.id,end:x.end}))};store.set('lista',LISTA)}renderLista();rC()},()=>{})}
+function feito(it){return dadosL().some(x=>x.stopId===it.id&&x.listaId===LISTA.ts)}
+function renderLista(){const box=$('#c-stops');box.textContent='';const its=LISTA.itens||[];let n=0;
+  if(!its.length)box.appendChild(el('p','muted','Sem lista. O técnico pode digitar a rua direto na tela de campo.'));
+  its.forEach((it,i)=>{const f=feito(it);if(f)n++;const d=el('div','row');d.style.justifyContent='space-between';d.append(el('span',null,(i+1)+'. '+it.end),el('span','pill '+(f?'ok':''),f?'feito':'pendente'));box.appendChild(d)});
+  $('#c-prog').textContent=n+' de '+its.length}
+$('#c-txt').value=(LISTA.itens||[]).map(x=>x.end).join('\n');
+$('#c-salvar').onclick=async()=>{const L=$('#c-txt').value.split('\n').map(x=>x.trim()).filter(Boolean);
+  LISTA={ts:L.length?Date.now():0,itens:L.map((end,i)=>({id:'i'+i,end}))};store.set('lista',LISTA);let w='local';
+  if(DB){try{await DB.doc('listas/noite').set(LISTA);w='equipe'}catch(e){}}
+  $('#c-msg').textContent=w==='local'?'Salva neste aparelho.':'Salva para a equipe.';renderLista();rC()};
+
+/* fluxo de campo */
+function iniciaRua(rua,stopId){salvar('leituras',{tipo:'evento',evento:'inicio_rua',rua,local:rua});F={ini:Date.now(),rua,stopId:stopId||null,listaId:stopId?LISTA.ts:null,step:'tubo',tubo:null,pres:null,filtro:'',ref:null,refLocal:'',pontos:[],cur:{local:'',lei:[]}};saveF();rC()}
+function fimRua(){if(F&&!F.fim){F.fim=Date.now();salvar('leituras',{tipo:'evento',evento:'fim_rua',rua:F.rua,local:F.rua})}}
+function rC(){const b=$('#c-main');if(!b)return;b.textContent='';
+  if(!F){b.appendChild(el('h3',null,'Em que rua você está?'));
+    const i=el('input');i.id='c-rua';i.placeholder='Nome da rua ou trecho';i.style.margin='10px 0';b.appendChild(i);
+    const pend=(LISTA.itens||[]).filter(it=>!feito(it));
+    if(pend.length){b.appendChild(el('p','muted status','Da lista da noite:'));const ch=el('div','chips');ch.style.margin='6px 0 12px';pend.forEach(it=>ch.appendChild(btn(it.end,()=>iniciaRua(it.end,it.id))));b.appendChild(ch)}
+    b.appendChild(btn('Começar',()=>{const v=i.value.trim();if(!v){i.focus();return}iniciaRua(v,null)},'pri'));return}
+  const top=el('div','row');top.style.justifyContent='space-between';top.append(el('h3',null,F.rua),btn('Sair da rua',()=>{fimRua();F=null;saveF();rC()}));b.appendChild(top);
+  const q=t=>{const p=el('p',null,t);p.style.cssText='font:700 19px var(--f-head);margin:14px 0 8px';b.appendChild(p)};
+  const go=s=>{F.step=s;saveF();rC()};
+  const nav=(back)=>{const r=el('div','row');r.style.marginTop='14px';if(back)r.append(btn('Voltar',()=>go(back)));b.appendChild(r)};
+  const T=F.tubo!=null?TUBOS[F.tubo]:null;
+  if(F.step==='tubo'){q('Qual o tipo de tubo?');TUBOS.forEach((t,i)=>b.appendChild(btn(t[0],()=>{F.tubo=i;go('pres')},'opt'+(F.tubo===i?' sel':''))))}
+  else if(F.step==='pres'){q('Pressão no manômetro (mca)');const i=el('input');i.type='number';i.min=0;i.step='0.1';i.inputMode='decimal';if(F.pres!=null)i.value=F.pres;b.appendChild(i);
+    b.appendChild(el('p','muted status','Abaixo de 15 mca o aparelho não detecta vazamento.'));
+    const r=el('div','row');r.style.marginTop='14px';r.append(btn('Voltar',()=>go('tubo')),btn('Sem manômetro',()=>{F.pres=null;go('filtro')}),btn('Continuar',()=>{if(i.value===''){i.focus();return}F.pres=+i.value;go(F.pres<15?'baixa':'filtro')},'pri'));b.appendChild(r)}
+  else if(F.step==='baixa'){const r1=el('div','res bad');r1.style.marginTop='14px';r1.append(el('span','t','Pressão baixa: '+F.pres+' mca'),el('span','s','Não dá para concluir com o geofone aqui.'));b.appendChild(r1);
+    const r=el('div','row');r.style.marginTop='14px';r.append(btn('Voltar',()=>go('pres')),btn('Medir mesmo assim',()=>go('filtro')),btn('Registrar e sair da rua',async()=>{await salvar('leituras',{tipo:'rua',rua:F.rua,local:F.rua,tubo:T[0],filtro:'',pressao:F.pres,leituras:[],resultado:'Pressão baixa, sem conclusão',stopId:F.stopId,listaId:F.listaId,obs:''});F=null;saveF();rC()},'pri'));b.appendChild(r)}
+  else if(F.step==='filtro'){q('Ajuste o geofone');const n=el('div','res');n.append(el('span','s','Filtro indicado'),el('span','bignum',T[1]+' a '+T[2]+' Hz'));b.appendChild(n);
+    b.appendChild(el('p','muted status','Está começando ou não sabe ajustar? Use o fixo Alto.'));
+    q('Qual filtro você usou?');b.appendChild(btn(T[1]+' a '+T[2]+' Hz',()=>{F.filtro=T[1]+' a '+T[2]+' Hz';go('ref')},'opt'));b.appendChild(btn('Alto fixo (100 a 1200 Hz)',()=>{F.filtro='Alto fixo (100 a 1200 Hz)';go('ref')},'opt'));nav('pres')}
+  else if(F.step==='ref'){q('Ponto de referência');b.appendChild(el('p',null,'Meça um ponto sem suspeita, como um registro. Ele é a base de comparação da rua.'));
+    const l1=el('label',null,'Onde? (ex.: em frente ao nº 120)');l1.style.marginTop='12px';const a=el('input');a.value=F.refLocal||'';
+    const l2=el('label',null,'Número do visor');l2.style.marginTop='10px';const v=el('input');v.type='number';v.min=0;v.max=99;v.inputMode='numeric';if(F.ref!=null)v.value=F.ref;
+    b.append(l1,a,l2,v);const r=el('div','row');r.style.marginTop='14px';r.append(btn('Voltar',()=>go('filtro')),btn('Salvar referência',async()=>{if(!a.value.trim()||v.value===''){(a.value.trim()?v:a).focus();return}F.ref=+v.value;F.refLocal=a.value.trim();
+      await salvar('leituras',{tipo:'referencia',rua:F.rua,local:F.refLocal,tubo:T[0],filtro:F.filtro,pressao:F.pres,leituras:[F.ref],resultado:'Referência',stopId:F.stopId,listaId:F.listaId,obs:''});go('medir')},'pri'));b.appendChild(r)}
+  else if(F.step==='medir'){
+    const L=limiarAbs();b.appendChild(el('p','muted status','Referência '+F.ref+' · suspeito a partir de '+Math.ceil(L)+' no visor'));
+    const prog=el('div','row');prog.style.margin='6px 0 10px';const dots=el('div','dots');for(let i=0;i<Math.max(MINP,F.pontos.length);i++){const p=F.pontos[i];dots.appendChild(el('i',p?corRes(p.res):''))}prog.append(dots,el('span','status muted',F.pontos.length+' de '+MINP+' pontos'));b.appendChild(prog);
+    q('Novo ponto');const l1=el('label',null,'Onde? (ex.: em frente ao nº 150)');const a=el('input');a.value=F.cur.local;b.append(l1,a);
+    const l2=el('label',null,'Número do visor, uma posição por vez');l2.style.marginTop='10px';b.appendChild(l2);
+    const r=el('div','row');r.style.flexWrap='nowrap';const v=el('input');v.type='number';v.min=0;v.max=99;v.inputMode='numeric';r.append(v,btn('Adicionar',()=>{if(v.value==='')return;F.cur.lei.push(+v.value);saveF();rC()},'pri'));b.appendChild(r);
+    const sv=btn('Salvar ponto',async()=>{const st=statusLei(F.cur.lei);const o={tipo:'ponto',rua:F.rua,local:F.cur.local.trim(),tubo:T[0],filtro:F.filtro,pressao:F.pres,ref:F.ref,fator:LIM.fator,leituras:F.cur.lei.slice(),resultado:st,stopId:F.stopId,listaId:F.listaId,obs:''};
+      await salvar('leituras',o);F.pontos.push({local:o.local,lei:o.leituras,res:st,h:Date.now()});F.cur={local:'',lei:[]};saveF();rC()},'pri');
+    const chk=()=>{sv.disabled=!(F.cur.local.trim()&&F.cur.lei.length)};chk();a.oninput=()=>{F.cur.local=a.value;saveF();chk()};
+    if(F.cur.lei.length){const ch=el('div','chips');ch.style.margin='10px 0';F.cur.lei.forEach(x=>ch.appendChild(el('span','chip '+(x>=L?'bad':'ok'),String(x))));b.appendChild(ch);
+      const st=statusLei(F.cur.lei);const msg={'Sem indício':'Perto da referência.','Suspeito':'Meça mais uma posição ao lado.','Vazamento provável':'Duas posições acima. Avise a equipe de reparo.'}[st];
+      const res=el('div','res '+corRes(st));res.append(el('span','t',st),el('span','s',msg));b.appendChild(res)}
+    const act=el('div','row');act.style.marginTop='14px';act.append(sv,btn('Terminar rua',()=>{fimRua();go('fim')}));const par=waBtn('Enviar parcial por WhatsApp',resumoTexto);par.style.marginTop='8px';b.appendChild(act);b.appendChild(par);}
+  else if(F.step==='fim'){q('Rua concluída');const c={ok:0,warn:0,bad:0};F.pontos.forEach(p=>c[corRes(p.res)]++);
+    if(F.pontos.length<MINP)b.appendChild(el('p','note',(F.pontos.length===1?'Foi 1 ponto':'Foram '+F.pontos.length+' pontos')+'. O mínimo recomendado é '+MINP+'.'));
+    const g=el('div','grid');g.style.cssText='gap:8px;margin-top:10px';[['ok','Sem indício'],['warn','Suspeito'],['bad','Vazamento provável']].forEach(([k,t])=>{const r=el('div','res '+k);r.append(el('span','t',c[k]+' '+t));g.appendChild(r)});b.appendChild(g);
+    F.pontos.filter(p=>p.res!=='Sem indício').forEach(p=>{const d=el('p',null,'• '+p.local+': '+p.res+' (visor '+p.lei.join(' / ')+')');d.style.marginTop='8px';b.appendChild(d)});
+    const tx=resumoTexto();const w=waBtn('Enviar resumo por WhatsApp',resumoTexto,'pri');w.style.marginTop='14px';b.appendChild(w);
+    const cp=btn('Copiar resumo',async()=>{try{await navigator.clipboard.writeText(tx);cp.textContent='Copiado'}catch(e){ta.hidden=false;ta.select();cp.textContent='Selecione e copie o texto'}});cp.style.cssText='margin:8px 0 0 8px';b.appendChild(cp);
+    const ta=el('textarea');ta.rows=8;ta.readOnly=true;ta.value=tx;ta.hidden=true;ta.style.marginTop='8px';b.appendChild(ta);
+    const r=el('div','row');r.style.marginTop='14px';r.append(btn('Voltar',()=>go('medir')),btn('Nova rua',()=>{fimRua();F=null;saveF();rC()},'pri'));b.appendChild(r)}
+}
+function resumoTexto(){const T=TUBOS[F.tubo];const L=['Geofone ECO200 - '+F.rua,fmtData(Date.now())+(nome()?' - '+nome():''),'Rua iniciada às '+hh(F.ini||Date.now())+(F.fim?', terminada às '+hh(F.fim):', em andamento'),'Tubo: '+(F.tubo===4?'não identificado':T[0])+' | Filtro: '+F.filtro+' | Pressão: '+(F.pres!=null?F.pres+' mca':'não medida'),'Referência: visor '+F.ref+' ('+F.refLocal+')','Pontos medidos: '+F.pontos.length,''];
+  const alt=F.pontos.filter(p=>p.res!=='Sem indício');if(!alt.length)L.push('Nenhum ponto com indício.');
+  alt.forEach(p=>L.push('- '+(p.h?hh(p.h)+' ':'')+p.local+': '+p.res+' (visor '+p.lei.join(' / ')+')'));return L.join('\n')}
+/* turno */
+function recsTurno(){if(!TURNO.id)return[];const seen=new Set();return[...loc.l,...DL].filter(r=>r.turno===TURNO.id).filter(r=>{const k=r.ts+'|'+r.tipo+'|'+(r.local||'')+'|'+(r.evento||'');if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>a.ts-b.ts)}
+function calcTurno(R,ini,fim,ate){const end=fim||ate;const marks=[ini,...R.map(r=>r.ts)];if(fim)marks.push(fim);marks.sort((a,b)=>a-b);let ativo=0;for(let i=1;i<marks.length;i++){const g=marks[i]-marks[i-1];if(g<=20*60000)ativo+=g}
+  const P=R.filter(r=>r.tipo==='ponto');return{total:end-ini,ativo,ruas:[...new Set(R.filter(r=>r.rua).map(r=>r.rua))],P,susp:P.filter(r=>r.resultado==='Suspeito').length,prov:P.filter(r=>r.resultado==='Vazamento provável').length}}
+function relTurno(){const R=recsTurno();const c=calcTurno(R,TURNO.ini,TURNO.fim,Date.now());
+  const L=['Relatório geofone ECO200 - '+(nome()||'Sem nome'),'Turno: início '+fmtData(TURNO.ini)+(TURNO.fim?', fim '+hh(TURNO.fim):' (em andamento)'),'Tempo no turno: '+dur(c.total)+' | Tempo ativo: '+dur(c.ativo)+' (intervalos de até 20 min entre registros)','Ruas: '+c.ruas.length+' | Pontos: '+c.P.length+' | Suspeitos: '+c.susp+' | Prováveis: '+c.prov,''];
+  c.ruas.forEach(rua=>{const rr=R.filter(r=>r.rua===rua);const pp=rr.filter(r=>r.tipo==='ponto');L.push(rua+' ('+hh(rr[0].ts)+' a '+hh(rr[rr.length-1].ts)+'): '+pp.length+' pontos');
+    pp.filter(r=>r.resultado!=='Sem indício').forEach(r=>L.push('  - '+hh(r.ts)+' '+r.local+': '+r.resultado+' (visor '+(r.leituras||[]).join(' / ')+')'))});
+  return L.join('\n')}
+function pTurno(){const ab=turnoAberto();$('#t-st').textContent=ab?'Em andamento':(TURNO.id?'Encerrado':'Não iniciado');$('#t-st').className='pill'+(ab?' ok':'');
+  $('#t-tx').textContent=TURNO.id?('Início '+fmtData(TURNO.ini)+(TURNO.fim?' · fim '+hh(TURNO.fim)+' · '+dur(TURNO.fim-TURNO.ini):'')):'Toque em Iniciar turno ao começar o trabalho.';
+  $('#t-ini').disabled=ab;$('#t-fim').disabled=!ab}
+$('#t-ini').onclick=()=>iniciarTurno(false);$('#t-fim').onclick=encerrarTurno;
+
+/* ---------- troca de dados sem rede: texto com código ---------- */
+const FIELDS=['ts','tipo','evento','rua','local','tubo','filtro','pressao','ref','fator','leituras','resultado','obs','turno','stopId'];
+function b64(u){let s='';for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s)}
+function ub64(t){const s=atob(t);const u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u}
+async function fluxo(modo,bytes){const S=new (modo==='c'?CompressionStream:DecompressionStream)('deflate-raw');const w=S.writable.getWriter();w.write(bytes);w.close();return new Uint8Array(await new Response(S.readable).arrayBuffer())}
+async function pack(obj){const raw=new TextEncoder().encode(JSON.stringify(obj));let by=raw,tag='P1';
+  if(window.CompressionStream){try{by=await fluxo('c',raw);tag='Z1'}catch(e){by=raw;tag='P1'}}
+  return 'GEOFONE-'+tag+':'+b64(by)+'#FIM'}
+async function unpack(txt){const m=/GEOFONE-(Z1|P1):([A-Za-z0-9+\/=\s]+?)#FIM/.exec(txt||'');if(!m)throw new Error('Código não encontrado na mensagem.');
+  let u=ub64(m[2].replace(/\s+/g,''));if(m[1]==='Z1'){if(!window.DecompressionStream)throw new Error('Este navegador não abre o código.');u=await fluxo('d',u)}
+  return JSON.parse(new TextDecoder().decode(u))}
+function mostraEnvio(boxId,msgId,btnsId,hintId,msg){$(boxId).hidden=false;$(msgId).value=msg;const bt=$(btnsId);bt.textContent='';
+  const curto=msg.length<=1800;if(curto){const a=el('a','btn pri','Abrir WhatsApp');a.href='https://wa.me/?text='+encodeURIComponent(msg);a.target='_blank';a.rel='noopener';bt.appendChild(a)}
+  const c=btn('Copiar mensagem',async()=>{try{await navigator.clipboard.writeText(msg);c.textContent='Copiado'}catch(e){$(msgId).select();c.textContent='Selecione e copie'}},curto?'':'pri');bt.appendChild(c);
+  if(hintId)$(hintId).textContent=curto?'Se o WhatsApp não preencher o texto, toque em Copiar e cole na conversa.':'Mensagem longa: toque em Copiar mensagem, abra o WhatsApp e cole na conversa.'}
+$('#t-prep').onclick=async()=>{if(!TURNO.id){$('#t-tx').textContent='Faça ao menos um registro ou inicie o turno.';return}
+  const dados={t:'dados',v:1,n:nome()||'Sem nome',turno:{id:TURNO.id,ini:TURNO.ini,fim:TURNO.fim},f:FIELDS,r:recsTurno().map(r=>FIELDS.map(k=>r[k]==null?null:r[k]))};
+  const code=await pack(dados);mostraEnvio('#t-out','#t-msg','#t-btns','#t-hint',relTurno()+'\n\nCódigo para o gestor (não apague):\n'+code)};
+$('#c-pkg-ok').onclick=async()=>{const m=$('#c-pkg-msg');try{const d=await unpack($('#c-pkg').value);if(d.t!=='pkg')throw new Error('Esta mensagem não é um pacote do gestor.');
+    const L=(d.l||[]).map(x=>String(x).trim()).filter(Boolean);LISTA={ts:d.d||Date.now(),itens:L.map((end,i)=>({id:'i'+i,end}))};store.set('lista',LISTA);$('#c-txt').value=L.join('\n');
+    if(typeof d.f==='number'){LIM={fator:d.f,prov:!!d.p};store.set('lim',LIM)}
+    m.textContent='Pacote recebido: '+L.length+' ruas.';$('#c-pkg').value='';renderLista();pLim()}catch(e){m.textContent=e.message||'Não foi possível ler o pacote.'}};
+pTurno();
+
+/* ---------- gestor ---------- */
+let GEST=store.get('gest',{turnos:[]});
+$('#g-fator').value=String(LIM.fator).replace('.',',');
+$('#g-gen').onclick=async()=>{const ruas=$('#g-ruas').value.split('\n').map(x=>x.trim()).filter(Boolean);const f=parseFloat(($('#g-fator').value||'').replace(',','.'));const tec=$('#g-tec').value.trim();
+  const code=await pack({t:'pkg',v:1,n:tec,d:Date.now(),l:ruas,f:isNaN(f)?null:f,p:false});
+  const msg='Pacote de trabalho - geofone ECO200'+(tec?' - '+tec:'')+'\n'+ruas.length+' ruas'+(isNaN(f)?'':' | limiar '+String(f).replace('.',',')+'x')+'\n\nNo app: Trabalho > Campo > Receber pacote do gestor. Cole esta mensagem.\n\n'+code;
+  mostraEnvio('#g-out','#g-pkg','#g-pkg-btns',null,msg)};
+$('#g-imp').onclick=async()=>{const m=$('#g-msg');try{const d=await unpack($('#g-in').value);if(d.t!=='dados')throw new Error('Esta mensagem não traz dados de turno.');
+    const recs=d.r.map(row=>{const o={};d.f.forEach((k,i)=>o[k]=row[i]);if(o.leituras==null)o.leituras=[];return o});
+    const key=d.n+'|'+d.turno.id;const item={key,tec:d.n,id:d.turno.id,ini:d.turno.ini,fim:d.turno.fim,recs,rec:Date.now()};
+    GEST.turnos=GEST.turnos.filter(t=>t.key!==key);GEST.turnos.push(item);store.set('gest',GEST);m.textContent='Recebido: '+d.n+', '+recs.length+' registros.';$('#g-in').value='';renderGest()}catch(e){m.textContent=e.message||'Não foi possível ler a mensagem.'}};
+function renderGest(){const tb=$('#g-tb');tb.textContent='';const T=GEST.turnos.slice().sort((a,b)=>b.ini-a.ini);$('#g-vazio').hidden=T.length>0;const rep=$('#g-rep');rep.textContent='';let n=0;
+  T.forEach(t=>{const ate=Math.max(t.ini,...t.recs.map(r=>r.ts));const c=calcTurno(t.recs.slice().sort((a,b)=>a.ts-b.ts),t.ini,t.fim,ate);const tr=document.createElement('tr');
+    [t.tec,fmtData(t.ini),t.fim?hh(t.fim):'em andamento',dur(c.total),dur(c.ativo),c.ruas.length,c.P.length,c.susp,c.prov].forEach(x=>{const td=document.createElement('td');td.textContent=x;tr.appendChild(td)});tb.appendChild(tr);
+    c.P.filter(r=>r.resultado!=='Sem indício').forEach(r=>{n++;const d=el('div','item');const a=el('div','row');a.style.justifyContent='space-between';a.append(el('b',null,r.rua+' · '+r.local),el('span','pill '+corRes(r.resultado),r.resultado));
+      d.append(a,el('p','muted status',fmtData(r.ts)+' · '+t.tec+' · visor '+(r.leituras||[]).join(' / ')+(r.ref!=null?' · ref '+r.ref:'')));rep.appendChild(d)})});
+  if(!n)rep.appendChild(el('p','muted','Nenhum ponto com indício.'))}
+const csvLinha=a=>a.map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(';');
+$('#g-csv-t').onclick=()=>{const L=[csvLinha(['Técnico','Início','Fim','Minutos no turno','Minutos ativos','Ruas','Pontos','Suspeitos','Prováveis'])];
+  GEST.turnos.slice().sort((a,b)=>a.ini-b.ini).forEach(t=>{const ate=Math.max(t.ini,...t.recs.map(r=>r.ts));const c=calcTurno(t.recs,t.ini,t.fim,ate);L.push(csvLinha([t.tec,new Date(t.ini).toLocaleString('pt-BR'),t.fim?new Date(t.fim).toLocaleString('pt-BR'):'',Math.round(c.total/60000),Math.round(c.ativo/60000),c.ruas.length,c.P.length,c.susp,c.prov]))});baixar('turnos-geofone.csv',L.join('\n'))};
+$('#g-csv-r').onclick=()=>{const L=[csvLinha(['Técnico','Data e hora','Tipo','Evento','Rua','Local','Tubo','Filtro','Pressão (mca)','Referência','Fator','Visor (leituras)','Resultado','Observações'])];
+  GEST.turnos.forEach(t=>t.recs.slice().sort((a,b)=>a.ts-b.ts).forEach(r=>L.push(csvLinha([t.tec,new Date(r.ts).toLocaleString('pt-BR'),r.tipo,r.evento,r.rua,r.local,r.tubo,r.filtro,r.pressao,r.ref,r.fator,(r.leituras||[]).join(' / '),r.resultado,r.obs]))));baixar('registros-geofone.csv',L.join('\n'))};
+let apagar=false;$('#g-limpar').onclick=()=>{if(!apagar){apagar=true;$('#g-limpar').textContent='Toque de novo para apagar tudo';setTimeout(()=>{apagar=false;$('#g-limpar').textContent='Apagar dados recebidos'},4000);return}
+  GEST={turnos:[]};store.set('gest',GEST);apagar=false;$('#g-limpar').textContent='Apagar dados recebidos';renderGest()};
+renderGest();
+
+
+function renderLeituras(){const box=$('#lista');const L=dadosL().filter(r=>!['referencia','evento','turno'].includes(r.tipo)).slice(0,30);box.textContent='';$('#csv').hidden=!dadosL().length;
+  if(!L.length)box.appendChild(el('p','muted','Nenhuma leitura registrada.'));
+  L.forEach(r=>{const d=el('div','item');const a=el('div','row');a.style.justifyContent='space-between';a.append(el('b',null,(r.rua&&r.rua!==r.local?r.rua+' · ':'')+r.local),el('span','pill '+corRes(r.resultado),r.resultado));
+    const vis=r.leituras&&r.leituras.length?'visor '+r.leituras.join(' / '):(r.nivel!=null?'visor '+r.nivel:'');
+    d.append(a,el('p','muted status',[fmtData(r.ts),r.nome,r.tubo,r.filtro?'filtro '+r.filtro:'',vis,r.ref!=null?'ref '+r.ref:'',r.pressao!=null?r.pressao+' mca':'',r.obs].filter(Boolean).join(' · ')));box.appendChild(d)});
+  renderLista()}
+let dl=null;(window.claude&&claude.use?claude.use('downloads'):Promise.resolve(null)).then(x=>{dl=x;renderLeituras()}).catch(()=>{});
+async function baixar(nome,texto){const data='\ufeff'+texto;if(dl){try{await dl.save({filename:nome,data})}catch(e){}return}
+  try{const u=URL.createObjectURL(new Blob([data],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=u;a.download=nome;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000)}catch(e){}}
+$('#csv').onclick=async()=>{const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const H=['Data','Operador','Turno','Evento','Tipo','Rua','Local','Tubo','Filtro','Pressão (mca)','Referência','Fator','Visor (leituras)','Resultado','Observações'];
+  const rows=dadosL().map(r=>[new Date(r.ts).toLocaleString('pt-BR'),r.nome,(r.turno?new Date(r.turno).toLocaleString('pt-BR'):''),r.evento,r.tipo,r.rua,r.local,r.tubo,r.filtro,r.pressao,r.ref,r.fator,(r.leituras&&r.leituras.length?r.leituras.join(' / '):r.nivel),r.resultado,r.obs].map(q).join(';'));
+  await baixar('leituras-geofone.csv',[H.map(q).join(';'),...rows].join('\n'))};
+pLim();renderLeituras();
+</script>
+<script>if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){addEventListener('load',function(){try{navigator.serviceWorker.register('sw.js')}catch(e){}})}</script></body></html>
