@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0f2a43"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Geofone"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Geofone ECO200</title>
+<title>Geofone Técnico</title>
 <style>
 /* Conceito: caderno de campo do operador de rede. Cabeçalho fixo com as etapas; números de leitura em fonte de visor; resultado sempre em cor (verde, amarelo, vermelho). */
 :root{
@@ -107,7 +107,7 @@ a.brandlink{color:inherit;text-decoration:none}
     <a class="brand brandlink" href="#inicio"><small>SAMAE Andirá</small>Geofone ECO200</a>
     <div class="who"><label for="nome" style="margin:0">Seu nome</label><input id="nome" autocomplete="name" placeholder="Nome do operador"></div>
   </div>
-  <div class="modes"><a href="#treinar" id="m-tr">Treinamento</a><a href="#campo" id="m-tb">Trabalho</a><a href="#gestor" id="m-ge">Gestor</a></div>
+  <div class="modes"><a href="#treinar" id="m-tr">Treinamento</a><a href="#campo" id="m-tb">Trabalho</a></div>
   <nav id="tabs" aria-label="Etapas"></nav>
 </header>
 
@@ -121,39 +121,12 @@ a.brandlink{color:inherit;text-decoration:none}
     <p class="muted" style="text-align:center">Treinamento e trabalho de campo para achar vazamentos na rede de água.</p>
     <a class="choice main" href="#campo"><b>Trabalho</b><span>Medir ruas, registrar pontos e enviar relatório</span></a>
     <a class="choice" href="#treinar"><b>Treinamento</b><span>Aprender, fazer a prova e treinar no simulador e no cavalete</span></a>
-    <a class="choice" href="#gestor"><b>Gestor</b><span>Enviar a lista de ruas ao técnico e receber os dados</span></a>
+    
     <p class="muted status" style="text-align:center">Funciona sem internet. O envio é por WhatsApp ou outro meio, como texto.</p>
   </div>
 </section>
 
-<!-- GESTOR -->
-<section class="view" id="v-gestor" hidden>
-  <h2>Gestor</h2>
-  <p class="muted" style="margin-bottom:14px">Sem rede: tudo vai e volta como texto, por WhatsApp ou outro meio. Os dados recebidos ficam guardados neste aparelho.</p>
-  <div class="grid g2">
-    <div class="card" style="display:grid;gap:10px;align-content:start">
-      <h3>1. Enviar ao técnico</h3>
-      <div><label for="g-tec">Técnico (opcional)</label><input id="g-tec"></div>
-      <div><label for="g-ruas">Ruas da noite, uma por linha</label><textarea id="g-ruas" rows="5"></textarea></div>
-      <div><label for="g-fator">Limiar (× a referência)</label><input id="g-fator" inputmode="decimal"></div>
-      <div class="row"><button class="pri" id="g-gen">Gerar pacote</button></div>
-      <div id="g-out" hidden style="display:grid;gap:8px"><textarea id="g-pkg" rows="6" readonly></textarea><div class="row" id="g-pkg-btns"></div></div>
-    </div>
-    <div class="card" style="display:grid;gap:10px;align-content:start">
-      <h3>2. Receber dados do técnico</h3>
-      <div><label for="g-in">Cole aqui a mensagem completa do técnico</label><textarea id="g-in" rows="6"></textarea></div>
-      <div class="row"><button class="pri" id="g-imp">Importar</button><span class="status muted" id="g-msg"></span></div>
-    </div>
-  </div>
-  <div class="card" style="margin-top:14px">
-    <div class="row" style="justify-content:space-between;margin-bottom:6px"><h3>Turnos recebidos</h3><span class="row"><button id="g-csv-t">CSV dos turnos</button><button id="g-csv-r">CSV dos registros</button></span></div>
-    <div class="tbl"><table><thead><tr><th>Técnico</th><th>Início</th><th>Fim</th><th>No turno</th><th>Ativo</th><th>Ruas</th><th>Pontos</th><th>Susp.</th><th>Prov.</th></tr></thead><tbody id="g-tb"></tbody></table></div>
-    <p class="muted status" id="g-vazio" style="margin-top:8px">Nenhum turno recebido ainda.</p>
-    <p class="muted status" style="margin-top:6px">Tempo ativo: soma dos intervalos de até 20 minutos entre registros.</p>
-  </div>
-  <div class="card" style="margin-top:14px"><h3 style="margin-bottom:6px">Pontos para a equipe de reparo</h3><div id="g-rep"><p class="muted">Nenhum ponto com indício.</p></div>
-    <div class="row" style="margin-top:12px"><button id="g-limpar">Apagar dados recebidos</button></div></div>
-</section>
+
 
 <!-- 1 TREINAR -->
 <section class="view" id="v-treinar">
@@ -382,12 +355,12 @@ $('#nome').value=store.get('nome','');
 $('#nome').addEventListener('input',()=>{store.set('nome',nome());if(!$('#p-aluno').dataset.touched)$('#p-aluno').value=nome()});
 
 /* ---------- rotas por hash ---------- */
-const VIEWS=['inicio','treinar','prova','simulador','cavalete','campo','ajuda','gestor'];
+const VIEWS=['inicio','treinar','prova','simulador','cavalete','campo','ajuda','gestor'].filter(v=>$('#v-'+v));
 const TABS={tr:[['treinar','1 Treinar'],['prova','2 Prova'],['simulador','3 Simulador'],['cavalete','4 Cavalete']],tb:[['campo','Campo'],['ajuda','Ajuda']],ge:[],in:[]};
 function route(){const id=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):'inicio';
   VIEWS.forEach(v=>{$('#v-'+v).hidden=v!==id});
   const modo=id==='inicio'?'in':(id==='campo'||id==='ajuda')?'tb':id==='gestor'?'ge':'tr';
-  $('#m-tr').setAttribute('aria-current',modo==='tr');$('#m-tb').setAttribute('aria-current',modo==='tb');$('#m-ge').setAttribute('aria-current',modo==='ge');
+  $('#m-tr').setAttribute('aria-current',modo==='tr');$('#m-tb').setAttribute('aria-current',modo==='tb');if($('#m-ge'))$('#m-ge').setAttribute('aria-current',modo==='ge');
   const nav=$('#tabs');nav.textContent='';nav.hidden=!TABS[modo].length;TABS[modo].forEach(([h,t])=>{const a=el('a',null,t);a.href='#'+h;a.setAttribute('aria-current',h===id?'page':'false');nav.appendChild(a)});
   if(id!=='simulador')pararSom(); window.scrollTo(0,0)}
 addEventListener('hashchange',route);route();
@@ -659,6 +632,7 @@ $('#c-pkg-ok').onclick=async()=>{const m=$('#c-pkg-msg');try{const d=await unpac
 pTurno();
 
 /* ---------- gestor ---------- */
+if($('#v-gestor')){
 let GEST=store.get('gest',{turnos:[]});
 $('#g-fator').value=String(LIM.fator).replace('.',',');
 $('#g-gen').onclick=async()=>{const ruas=$('#g-ruas').value.split('\n').map(x=>x.trim()).filter(Boolean);const f=parseFloat(($('#g-fator').value||'').replace(',','.'));const tec=$('#g-tec').value.trim();
@@ -683,6 +657,7 @@ $('#g-csv-r').onclick=()=>{const L=[csvLinha(['Técnico','Data e hora','Tipo','E
 let apagar=false;$('#g-limpar').onclick=()=>{if(!apagar){apagar=true;$('#g-limpar').textContent='Toque de novo para apagar tudo';setTimeout(()=>{apagar=false;$('#g-limpar').textContent='Apagar dados recebidos'},4000);return}
   GEST={turnos:[]};store.set('gest',GEST);apagar=false;$('#g-limpar').textContent='Apagar dados recebidos';renderGest()};
 renderGest();
+}
 
 
 function renderLeituras(){const box=$('#lista');const L=dadosL().filter(r=>!['referencia','evento','turno'].includes(r.tipo)).slice(0,30);box.textContent='';$('#csv').hidden=!dadosL().length;

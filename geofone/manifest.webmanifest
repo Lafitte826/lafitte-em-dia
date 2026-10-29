@@ -1,5 +1,6 @@
 {
-  "name": "Geofone ECO200 - SAMAE Andirá",
+  "id": "geofone-tecnico",
+  "name": "Geofone ECO200 - Técnico",
   "short_name": "Geofone",
   "lang": "pt-BR",
   "start_url": "./index.html#campo",
@@ -27,6 +28,5 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ],
-  "id": "geofone-eco200"
+  ]
 }
