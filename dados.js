@@ -3,7 +3,7 @@
 // Para atualizar: troque os valores de "ant" (última leitura) e "ant2" (penúltima) e a data em "antData".
 
 const CONFIG = {
-  versao: "2026.10.27-1",
+  versao: "2026.10.29-1",
   // Número do síndico com DDI e DDD, só dígitos (ex.: 5541999999999).
   // Vazio: o WhatsApp abre e pergunta para quem enviar.
   whatsapp: "5541998767915",

@@ -335,7 +335,8 @@ const TELAS = {
       return;
     }
     if (urgente) h += `<p class="nota">${temProblema(t, r) ? "⚠️ Tem problema: avise o síndico agora." : "📷 Tem foto: envie agora."}</p>`;
-    h += `<p class="passo">1. Enviar a mensagem</p><a class="btn zap" id="zap" href="${link}" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>`;
+    h += `<p class="passo">1. Enviar a mensagem</p><a class="btn zap" id="zap" href="${link}" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>
+      <p class="nota">No WhatsApp, toque na seta verde ➤ para enviar.</p>`;
     if (fotos.length) {
       h += `<p class="passo">2. Enviar as fotos (${fotos.length})</p>
         <button class="btn zap" id="enviar-fotos">Enviar fotos pelo WhatsApp</button>
@@ -346,7 +347,8 @@ const TELAS = {
       <a class="btn sec" href="#/tarefa/${id}">Voltar e corrigir</a>`;
     $app.innerHTML = h;
     document.getElementById("enviar-fotos")?.addEventListener("click", () => compartilharFotos(t, fotos));
-    document.getElementById("concluir").addEventListener("click", () => concluir(t, r, texto, fotos.length, true));
+    travarAteAbrir("tarefa:" + id, "concluir");
+    document.getElementById("concluir").addEventListener("click", () => { esquecerAbertura("tarefa:" + id); concluir(t, r, texto, fotos.length, true); });
   },
 
   async historico() {
@@ -376,13 +378,16 @@ const TELAS = {
     if (!rel) return (location.hash = "#/");
     const texto = await textoRelatorio(rel, e);
     let h = `<h1>📤 ${rel.titulo}</h1><pre class="msg">${esc(texto)}</pre>
-      <p class="passo">1. Enviar a mensagem</p><a class="btn zap" href="${linkZap(texto)}" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>
+      <p class="passo">1. Enviar a mensagem</p><a class="btn zap" id="zap" href="${linkZap(texto)}" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>
+      <p class="nota">No WhatsApp, toque na seta verde ➤ para enviar.</p>
       <p class="passo">2. Depois de enviar</p><button class="btn ok" id="enviado">✔ Já enviei</button>`;
     $app.innerHTML = h;
+    travarAteAbrir("relatorio:" + tipo, "enviado");
     document.getElementById("enviado").addEventListener("click", async () => {
       const env = (await DB.ler("relatorios")) || {};
       env[tipo] = rel.fim;
       await DB.gravar("relatorios", env);
+      esquecerAbertura("relatorio:" + tipo);
       location.hash = "#/";
       aviso("Resumo enviado ✔");
     });
@@ -827,6 +832,24 @@ async function enviarArquivo(regs, mes) {
   aviso("O arquivo foi salvo no celular.");
 }
 
+// "Já enviei" só funciona depois de tocar em "Enviar pelo WhatsApp" (vale também ao voltar do WhatsApp)
+const abertos = new Set();
+function travarAteAbrir(chave, idBotao) {
+  const botao = document.getElementById(idBotao);
+  let aberto = abertos.has(chave);
+  try { aberto = aberto || sessionStorage.getItem("zap:" + chave) === "1"; } catch {}
+  botao.disabled = !aberto;
+  document.getElementById("zap").addEventListener("click", () => {
+    abertos.add(chave);
+    try { sessionStorage.setItem("zap:" + chave, "1"); } catch {}
+    botao.disabled = false;
+  });
+}
+function esquecerAbertura(chave) {
+  abertos.delete(chave);
+  try { sessionStorage.removeItem("zap:" + chave); } catch {}
+}
+
 function aviso(txt) {
   const d = document.createElement("div");
   d.className = "toast"; d.textContent = txt;
@@ -873,7 +896,7 @@ async function rota() {
   else await TELAS.inicio();
 }
 window.addEventListener("hashchange", rota);
-document.addEventListener("visibilitychange", () => { if (!document.hidden && !location.hash.startsWith("#/tarefa")) rota(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && !/^#\/(tarefa|enviar|relatorio)/.test(location.hash)) rota(); });
 
 const NIVEIS = [0.85, 1, 1.15, 1.3, 1.5];
 let nivel = 1;
