@@ -3,7 +3,7 @@
 // Para atualizar: troque os valores de "ant" (última leitura) e "ant2" (penúltima) e a data em "antData".
 
 const CONFIG = {
-  versao: "2026.10.29-1",
+  versao: "2026.10.31-1",
   // Número do síndico com DDI e DDD, só dígitos (ex.: 5541999999999).
   // Vazio: o WhatsApp abre e pergunta para quem enviar.
   whatsapp: "5541998767915",
@@ -187,7 +187,7 @@ const LIMPEZA = [
 ];
 
 // Festas no salão: só as datas (o resto fica com o síndico). 24/12 e 31/12: reserva de fim de ano (sorteio).
-const FESTAS = ["2026-11-28", "2026-11-29", "2026-12-04", "2026-12-12", "2026-12-13", "2026-12-17", "2026-12-24", "2026-12-31", "2027-01-30"];
+const FESTAS = ["2026-11-28", "2026-11-29", "2026-12-04", "2026-12-10", "2026-12-12", "2026-12-13", "2026-12-17", "2026-12-24", "2026-12-31", "2027-01-29", "2027-01-30"];
 
 const PESSOAS = [
   { id: "zelador", nome: "Zelador", icone: "🧰" },
