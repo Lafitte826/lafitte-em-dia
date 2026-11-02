@@ -775,7 +775,11 @@ function ocorrencias(t, ini, fim) {
 
 async function textoRelatorio(rel, e) {
   const ini = Agenda.deIso(rel.ini), fim = Agenda.deIso(rel.fim), mes = rel.tipo === "mes";
-  const regs = ((await DB.ler("registros")) || []).filter(x => x.dia >= rel.ini && x.dia <= rel.fim).reverse();
+  // Se a mesma tarefa foi concluída mais de uma vez para a mesma data, vale a última
+  const ultimos = new Map();
+  for (const x of ((await DB.ler("registros")) || []).filter(x => x.dia >= rel.ini && x.dia <= rel.fim).reverse())
+    ultimos.set(`${x.id}|${x.chave || x.quando}`, x);
+  const regs = [...ultimos.values()];
   const dm = d => dataBr(d).slice(0, 5);
   const linhas = [`*Maison Lafitte · ${rel.titulo}*`, `${dataBr(ini)} a ${dataBr(fim)}`];
   for (const t of TAREFAS) {
@@ -786,7 +790,8 @@ async function textoRelatorio(rel, e) {
     const nao = oc.filter(o => !feitas[o.chave]);
     linhas.push("", `${t.icone} *${t.titulo}*`);
     if (mes) {
-      linhas.push(oc.length ? `   ${nao.length ? "⚠️" : "✅"} ${oc.length - nao.length} de ${oc.length} feitas` : `   ${feitos.length} ${feitos.length === 1 ? "vez" : "vezes"}`);
+      const problema = feitos.some(x => x.curto.some(l => /^(❌|⚠️ [^0-9])/.test(l))) && t.tipo !== "checklist";
+      linhas.push(oc.length ? `   ${nao.length || problema ? "⚠️" : "✅"} ${oc.length - nao.length} de ${oc.length} feitas` : `   ${feitos.length} ${feitos.length === 1 ? "vez" : "vezes"}`);
       if (nao.length) linhas.push(`   ❌ Não feita: ${nao.map(o => dm(o.venc)).join(", ")}`);
       if (t.tipo === "checklist") {
         const inc = feitos.filter(x => /^⚠️/.test(x.curto[0] || "")).length;
