@@ -3,7 +3,7 @@
 // Para atualizar: troque os valores de "ant" (última leitura) e "ant2" (penúltima) e a data em "antData".
 
 const CONFIG = {
-  versao: "2026.11.08-1",
+  versao: "2026.11.08-2",
   // Número do síndico com DDI e DDD, só dígitos (ex.: 5541999999999).
   // Vazio: o WhatsApp abre e pergunta para quem enviar.
   whatsapp: "5541998767915",
@@ -187,6 +187,12 @@ const LIMPEZA = [
 ];
 
 // Festas no salão: só as datas (o resto fica com o síndico). 24/12 e 31/12: reserva de fim de ano (sorteio).
+// Correções únicas das últimas leituras guardadas no celular (valor = leitura do mês, anterior = a leitura antes dela)
+const CORRECOES = [
+  { id: "2026-11-08-sanepar", tarefa: "leitura29", item: "agua:entrada", valor: 779, anterior: 517 },
+  { id: "2026-11-08-gas1501", tarefa: "leitura29", item: "gas:1501", valor: 554.080, anterior: 554.080 },
+];
+
 const FESTAS = ["2026-11-28", "2026-11-29", "2026-12-04", "2026-12-05", "2026-12-10", "2026-12-12", "2026-12-13", "2026-12-17", "2026-12-24", "2027-01-29", "2027-01-30"];
 
 const PESSOAS = [

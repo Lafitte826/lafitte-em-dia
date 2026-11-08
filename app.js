@@ -937,11 +937,30 @@ if (CONFIG.teste) {
   document.getElementById("data-hoje").addEventListener("click", () => mudar(null));
 }
 
+// Corrige uma vez leituras anteriores já guardadas no celular (lista CORRECOES em dados.js)
+async function aplicarCorrecoes() {
+  const feitas = (await DB.ler("correcoesFeitas")) || [];
+  let mudou = false;
+  for (const c of CORRECOES) {
+    if (feitas.includes(c.id)) continue;
+    const u = await DB.ler("ultimas:" + c.tarefa);
+    if (u && u.valores && u.valores[c.item] != null) {
+      u.valores[c.item] = c.valor;
+      u.anteriores = u.anteriores || {};
+      u.anteriores[c.item] = c.anterior;
+      await DB.gravar("ultimas:" + c.tarefa, u);
+    }
+    feitas.push(c.id); mudou = true;
+  }
+  if (mudou) await DB.gravar("correcoesFeitas", feitas);
+}
+
 // Versão final: ao mudar a data de início, o app começa limpo (apaga o que foi feito no teste)
 (async () => {
   if (!CONFIG.teste && (await DB.ler("inicioUsado")) !== CONFIG.inicio) {
     await DB.limpar();
     await DB.gravar("inicioUsado", CONFIG.inicio);
   }
+  await aplicarCorrecoes();
   rota();
 })();
